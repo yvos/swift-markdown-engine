@@ -41,6 +41,12 @@ The exact topic and integration commit identities are:
    input remains disabled. The sanctioned mutation path reports exact edits and
    supports document-scoped undo and redo. Upstream draft PR
    [#178](https://github.com/nodes-app/swift-markdown-engine/pull/178).
+5. An optional `NativeTextViewWrapper.onPointerInteraction` callback classifies
+   native task-checkbox, navigated-link, and ordinary stationary content clicks
+   for host coordination. A per-press session enforces once-only delivery and
+   filters drag selections, modifier-clicks, and link edit-zone clicks from
+   content activation. The callback does not replace wiki-link callbacks or
+   AppKit's normal URL handling and defaults to `nil`.
 
 These changes satisfy the reusable engine-side contract discussed in upstream
 issue [#173](https://github.com/nodes-app/swift-markdown-engine/issues/173).
@@ -65,3 +71,12 @@ upstream Apache License 2.0 remains in `LICENSE`; the upstream baseline contains
 no `NOTICE` file. Every modified pre-existing file carries a dated pointer to
 this change record; newly added source and test files are documented here and
 remain covered by the repository's Apache-2.0 license.
+
+## Unreleased validation
+
+Validated on macOS on 2026-09-04:
+
+- Focused `swift test --filter` over pointer-interaction and read-only checkbox
+  suites: 15 tests in 2 suites passed.
+- Clean `swift test`: 519 tests in 73 suites passed.
+- `swift build --product MarkdownEngine`: succeeded.

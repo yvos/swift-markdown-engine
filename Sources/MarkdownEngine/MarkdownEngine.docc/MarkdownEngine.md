@@ -1,3 +1,5 @@
+<!-- Modified in the NoFray fork on 2026-09-04; see FORK_CHANGES.md. -->
+
 # ``MarkdownEngine``
 
 A TextKit 2-backed Markdown editor view for macOS, bridged to SwiftUI.
@@ -41,6 +43,35 @@ The default ``MarkdownEditorConfiguration`` ships with no-op service
 implementations, so the editor renders plain Markdown out of the box. Add
 real services as you need them.
 
+### Coordinating Pointer Interactions
+
+Use `onPointerInteraction` when a containing view needs to react to native
+editor clicks without placing an ambiguous SwiftUI tap gesture over the text
+view:
+
+```swift
+NativeTextViewWrapper(
+    text: $text,
+    onPointerInteraction: { interaction in
+        switch interaction {
+        case .taskCheckbox:
+            taskPopover = nil
+        case .link:
+            selectionPopover = nil
+        case .content:
+            activateDocument()
+        }
+    }
+)
+```
+
+The callback runs after the engine handles task checkboxes and navigated
+links. `.content` is reported only for an unmodified, stationary, single
+primary click that was not consumed as a checkbox or link. Drag selections,
+modifier-clicks, and link edit-zone clicks do not report `.content`. Omitting
+the callback preserves the existing AppKit behavior, including normal URL
+opening and `onLinkClick` delivery.
+
 ### Customizing Appearance
 
 ```swift
@@ -71,6 +102,7 @@ configuration.services = services
 ### Editor View
 
 - ``NativeTextViewWrapper``
+- ``MarkdownEditorPointerInteraction``
 
 ### Configuration
 

@@ -1,6 +1,6 @@
 # Changelog
 
-> Modified in the NoFray fork on 2026-09-03; see `FORK_CHANGES.md`.
+> Modified in the NoFray fork on 2026-09-03 and 2026-09-04; see `FORK_CHANGES.md`.
 
 All notable changes to swift-markdown-engine are documented in this file.
 
@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   multiline, line-ending-preserving block-formatting commands for embedders.
 - `NativeTextViewWrapper.allowsTaskCheckboxInteractionWhenReadOnly` optionally
   keeps task checkboxes interactive without enabling ordinary text editing.
+- `NativeTextViewWrapper.onPointerInteraction` reports task-checkbox, navigated
+  link, and ordinary stationary content clicks after native handling, without
+  requiring an overlapping SwiftUI tap gesture.
 - **Directive seam (parsing)**: opt-in named inline commands with typed
   arguments, for constructs that need a name and parameters rather than
   delimiters. A `MarkdownDirective` declares a name, a form — self-contained
