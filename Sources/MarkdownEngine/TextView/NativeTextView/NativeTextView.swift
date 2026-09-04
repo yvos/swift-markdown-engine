@@ -1,7 +1,7 @@
 //
 //  NativeTextView.swift
 //  MarkdownEngine
-//  Modified in the NoFray fork on 2026-09-03; see FORK_CHANGES.md.
+//  Modified in the NoFray fork on 2026-09-03 and 2026-09-04; see FORK_CHANGES.md.
 //
 //  Created by Luca Chen on 18.02.26.
 //
@@ -47,6 +47,7 @@ final class NativeTextView: NSTextView {
 
     // MARK: Editor wiring
     var onPasteImage: ((NSPasteboard) -> String?)?
+    var onPointerInteraction: ((MarkdownEditorPointerInteraction) -> Void)?
     var onFocusChange: ((Bool) -> Void)?
     private var reportedFocus = false
     /// `nil` preserves AppKit-owned focus. A value represents the latest

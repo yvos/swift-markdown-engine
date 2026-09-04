@@ -1,7 +1,7 @@
 //
 //  NativeTextView+TaskCheckbox.swift
 //  MarkdownEngine
-//  Modified in the NoFray fork on 2026-09-03; see FORK_CHANGES.md.
+//  Modified in the NoFray fork on 2026-09-03 and 2026-09-04; see FORK_CHANGES.md.
 //
 //  Created by Luca Chen on 16.03.26.
 //
@@ -13,6 +13,15 @@
 import AppKit
 
 extension NativeTextView {
+
+    func consumeTaskCheckboxIfHit(
+        event: NSEvent,
+        pointerInteraction: inout NativePointerInteractionSession
+    ) -> Bool {
+        guard toggleTaskCheckboxIfHit(event: event) == true else { return false }
+        pointerInteraction.taskCheckboxWasConsumed()
+        return true
+    }
 
     /// The drawn checkbox square under `containerPoint`, if any.
     ///

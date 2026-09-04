@@ -1,6 +1,7 @@
 //
 //  NativeTextView+DragSelectBoost.swift
 //  MarkdownEngine
+//  Modified in the NoFray fork on 2026-09-04; see FORK_CHANGES.md.
 //
 //  Created by Luca Chen on 16.03.26.
 //
@@ -19,8 +20,21 @@ extension NativeTextView {
             guard let ts = textStorage, idx >= 0, idx < ts.length else { return false }
             return ts.attribute(.link, at: idx, effectiveRange: nil) != nil
         }()
-        if let toggled = toggleTaskCheckboxIfHit(event: event), toggled { return }
-        if remapClickInParagraphSpacing(event: event) { return }
+        var pointerInteraction = NativePointerInteractionSession(
+            event: event,
+            beganOnLink: clickPointOnLink,
+            onInteraction: onPointerInteraction
+        )
+        if consumeTaskCheckboxIfHit(event: event, pointerInteraction: &pointerInteraction) { return }
+        if remapClickInParagraphSpacing(event: event) {
+            pointerInteraction.complete(
+                linkDidNavigate: false,
+                linkWasHandled: false,
+                travel: 0,
+                selectionLength: selectedRange().length
+            )
+            return
+        }
         dragStartMouseScreenLoc = NSEvent.mouseLocation
         let boostTimer = Timer(timeInterval: 1.0 / configuration.dragSelection.ticksPerSecond, repeats: true) { [weak self] _ in
             self?.performDragBoostTick()
@@ -69,6 +83,12 @@ extension NativeTextView {
             let len = min(preClickSelection.length, max(0, docLen - loc))
             setSelectedRange(NSRange(location: loc, length: len))
         }
+        pointerInteraction.complete(
+            linkDidNavigate: linkClickDidNavigate,
+            linkWasHandled: linkClickDidFire,
+            travel: travel,
+            selectionLength: selectedRange().length
+        )
     }
 
     func performDragBoostTick() {
