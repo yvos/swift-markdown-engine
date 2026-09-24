@@ -1,7 +1,7 @@
 //
 //  ReadOnlyTaskCheckboxTests.swift
 //  MarkdownEngineTests
-//  Added to the NoFray fork on 2026-09-03 under Apache-2.0; see FORK_CHANGES.md.
+//  Added to the NoFray fork on 2026-09-03 and modified on 2026-09-04; see FORK_CHANGES.md.
 //
 
 import AppKit
@@ -39,6 +39,34 @@ struct ReadOnlyTaskCheckboxTests {
 
         #expect(fixture.textView.string == "- [x] Item\r\nPlain\r\n")
         #expect(fixture.published() == "- [x] Item\r\nPlain\r\n")
+    }
+
+    @Test("Checkbox interaction is reported after the engine consumes and toggles it")
+    func interactionFollowsCheckboxToggle() throws {
+        let source = "- [ ] Item\n"
+        let fixture = try makeFixture(
+            source,
+            checkboxRange: NSRange(location: 2, length: 3),
+            allowsReadOnlyToggle: true
+        )
+        var interactions: [MarkdownEditorPointerInteraction] = []
+        var textWhenReported: String?
+        var pointerInteraction = NativePointerInteractionSession(
+            event: fixture.click,
+            beganOnLink: false,
+            onInteraction: { interaction in
+                interactions.append(interaction)
+                textWhenReported = fixture.textView.string
+            }
+        )
+
+        #expect(fixture.textView.consumeTaskCheckboxIfHit(
+            event: fixture.click,
+            pointerInteraction: &pointerInteraction
+        ))
+
+        #expect(interactions == [.taskCheckbox])
+        #expect(textWhenReported == "- [x] Item\n")
     }
 
     @Test("Read-only checkboxes remain inert by default")

@@ -1,7 +1,7 @@
 //
 //  NativeTextView.swift
 //  MarkdownEngine
-//  Modified in the NoFray fork on 2026-09-03; see FORK_CHANGES.md.
+//  Modified in the NoFray fork on 2026-09-03 and 2026-09-04; see FORK_CHANGES.md.
 //
 //  Created by Luca Chen on 18.02.26.
 //
@@ -26,6 +26,8 @@ final class NativeTextView: NSTextView {
     var pendingFullLayoutMeasure = false
     /// Coalesces wide-table overlay updates to once per runloop (resize fires many per frame).
     var pendingWideTableOverlayUpdate = false
+    /// Coalesces table restyles to the latest width once per run-loop turn.
+    var pendingTableWidthChangeUpdate = false
     var suppressAutoRevealOnce: Bool = false
     // Set by clickedOnLink during a mouseDown: did the delegate fire (so
     // mouseDown can re-dispatch a click AppKit dropped), and did it navigate
@@ -47,6 +49,7 @@ final class NativeTextView: NSTextView {
 
     // MARK: Editor wiring
     var onPasteImage: ((NSPasteboard) -> String?)?
+    var onPointerInteraction: ((MarkdownEditorPointerInteraction) -> Void)?
     var onFocusChange: ((Bool) -> Void)?
     private var reportedFocus = false
     /// `nil` preserves AppKit-owned focus. A value represents the latest

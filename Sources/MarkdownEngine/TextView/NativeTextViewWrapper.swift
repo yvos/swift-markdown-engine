@@ -1,7 +1,7 @@
 //
 //  NativeTextViewWrapper.swift
 //  MarkdownEngine
-//  Modified in the NoFray fork on 2026-09-03; see FORK_CHANGES.md.
+//  Modified in the NoFray fork on 2026-09-03 and 2026-09-04; see FORK_CHANGES.md.
 //
 //  Created by Luca Chen on 18.02.26.
 //
@@ -84,6 +84,12 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
     /// to the system's default plain-text paste.
     public var onPasteImage: ((NSPasteboard) -> String?)?
 
+    /// Reports the kind of native pointer interaction recognized by the editor.
+    /// Delivery occurs after checkbox or link handling, while ``MarkdownEditorPointerInteraction/content``
+    /// is limited to an unmodified, stationary primary click. Defaults to `nil`,
+    /// preserving the editor's existing AppKit behavior.
+    public var onPointerInteraction: ((MarkdownEditorPointerInteraction) -> Void)?
+
     /// Fires when the user clicks a `[[Name]]` link. The argument is the
     /// resolved opaque identifier (or the display name when no resolver
     /// was supplied).
@@ -165,6 +171,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         isFocused: Binding<Bool>? = nil,
         allowsTaskCheckboxInteractionWhenReadOnly: Bool = false,
         onPasteImage: ((NSPasteboard) -> String?)? = nil,
+        onPointerInteraction: ((MarkdownEditorPointerInteraction) -> Void)? = nil,
         onLinkClick: ((String) -> Void)? = nil,
         onCaretRectChange: ((CGRect) -> Void)? = nil,
         onTextMutation: ((MarkdownTextMutation) -> Void)? = nil,
@@ -194,6 +201,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         self.isFocused = isFocused
         self.allowsTaskCheckboxInteractionWhenReadOnly = allowsTaskCheckboxInteractionWhenReadOnly
         self.onPasteImage = onPasteImage
+        self.onPointerInteraction = onPointerInteraction
         self.onLinkClick = onLinkClick
         self.onCaretRectChange = onCaretRectChange
         self.onTextMutation = onTextMutation
@@ -309,6 +317,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         textView.isAutomaticDataDetectionEnabled = true
         textView.isAutomaticDashSubstitutionEnabled = false
         textView.onPasteImage = onPasteImage
+        textView.onPointerInteraction = onPointerInteraction
         if #available(macOS 15.1, *) {
             // `.limited` = the Writing Tools popover panel; `.complete` = the inline
             // experience that morphs the text with an animation. We use `.limited` so
@@ -481,6 +490,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         }
 
         textView.onPasteImage = onPasteImage
+        textView.onPointerInteraction = onPointerInteraction
         textView.isCursorExcluded = isCursorExcluded
         textView.setPlaceholder(placeholder)
         // Sync heightBehavior across all three layers (scroll view, text view,
