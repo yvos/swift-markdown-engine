@@ -80,3 +80,25 @@ Validated on macOS on 2026-09-04:
   suites: 15 tests in 2 suites passed.
 - Clean `swift test`: 519 tests in 73 suites passed.
 - `swift build --product MarkdownEngine`: succeeded.
+
+
+## Document-review repair candidate (unreleased, 2026-09-24)
+
+This candidate starts at the published `0.13.0-nofray.1` commit
+`b426d419c1a2c635f36d250091366517d9ca5321`. It carries the generic document
+transaction, source-range, hidden-comment and opaque host-history extensions
+from the local review topic onto that updated baseline. The original topic and
+its unrelated caret-scrolling changes have been preserved separately.
+
+Native undo completion republishes the edited source through a writable binding.
+Host-triggered renders see the prepared native source before they can rebuild
+storage and move the caret. Inspector transactions own an undo group and queued
+transactions recheck their shared pending binding before applying. Deferred text
+publication rejects a replaced document/buffer. Domain review semantics remain
+in NoFray; the engine handles only source edits and opaque context.
+
+Validation: 562 core engine tests and 1 LaTeX integration test passed. NoFray's
+14 focused session/history tests passed, including its actual Markdown adapter,
+two mounted editors, native undo/redo, one-time transaction consumption and
+reload invalidation. The normal remote release/pin is still pending; this is
+unpublished source, not a new immutable release.

@@ -123,6 +123,92 @@ public enum WikiLinkService {
         return (result, metadata)
     }
 
+    /// Maps a selection from the editor's projected display string back to
+    /// its storage-form Markdown offsets. Boundaries inside a renamed or
+    /// shortened wiki-link label are ambiguous and return `nil`; boundaries
+    /// outside a link, or exactly around the full link, remain exact.
+    public static func storageRange(
+        forDisplayRange displayRange: NSRange,
+        metadata: [RangeKey: LinkMetadata]
+    ) -> NSRange? {
+        guard displayRange.location != NSNotFound,
+              displayRange.location >= 0,
+              displayRange.length >= 0 else { return nil }
+        let links = metadata.map { (display: NSRange(location: $0.key.location, length: $0.key.length), storage: $0.value.storageRange) }
+            .sorted { $0.display.location < $1.display.location }
+        guard let start = storageBoundary(for: displayRange.location, links: links),
+              let end = storageBoundary(for: NSMaxRange(displayRange), links: links),
+              end >= start else { return nil }
+        return NSRange(location: start, length: end - start)
+    }
+
+    /// A hit inside a projected wiki-link maps to the complete backing token;
+    /// otherwise it maps the exact UTF-16 character hit where possible.
+    public static func storageHitRange(
+        atDisplayLocation location: Int,
+        metadata: [RangeKey: LinkMetadata]
+    ) -> NSRange? {
+        for (key, value) in metadata where location >= key.location && location < key.location + key.length {
+            return value.storageRange
+        }
+        return storageRange(forDisplayRange: NSRange(location: location, length: 1), metadata: metadata)
+    }
+
+    /// Maps raw storage boundaries to the editor's display string. A boundary
+    /// inside a projected wiki-link token is ambiguous and fails closed.
+    public static func displayRange(
+        forStorageRange storageRange: NSRange,
+        metadata: [RangeKey: LinkMetadata]
+    ) -> NSRange? {
+        guard storageRange.location != NSNotFound,
+              storageRange.location >= 0,
+              storageRange.length >= 0 else { return nil }
+        let links = metadata.map { (display: NSRange(location: $0.key.location, length: $0.key.length), storage: $0.value.storageRange) }
+            .sorted { $0.storage.location < $1.storage.location }
+        guard let start = displayBoundary(for: storageRange.location, links: links),
+              let end = displayBoundary(for: NSMaxRange(storageRange), links: links),
+              end >= start else { return nil }
+        return NSRange(location: start, length: end - start)
+    }
+
+    private static func storageBoundary(
+        for location: Int,
+        links: [(display: NSRange, storage: NSRange)]
+    ) -> Int? {
+        var delta = 0
+        for link in links {
+            let displayEnd = NSMaxRange(link.display)
+            if location == link.display.location { return link.storage.location }
+            if location == displayEnd { return NSMaxRange(link.storage) }
+            if location > link.display.location && location < displayEnd { return nil }
+            if displayEnd < location {
+                delta += link.storage.length - link.display.length
+            } else if link.display.location >= location {
+                break
+            }
+        }
+        return location + delta
+    }
+
+    private static func displayBoundary(
+        for location: Int,
+        links: [(display: NSRange, storage: NSRange)]
+    ) -> Int? {
+        var delta = 0
+        for link in links {
+            let storageEnd = NSMaxRange(link.storage)
+            if location == link.storage.location { return link.display.location }
+            if location == storageEnd { return NSMaxRange(link.display) }
+            if location > link.storage.location && location < storageEnd { return nil }
+            if storageEnd < location {
+                delta += link.display.length - link.storage.length
+            } else if link.storage.location >= location {
+                break
+            }
+        }
+        return location + delta
+    }
+
     /// Convert display `[[Name]]` back to storage `[[Name|<id>]]`, preferring the `.wikiLinkID` attribute.
     public static func makeStorageState(
         from displayText: String,
@@ -325,4 +411,3 @@ public enum WikiLinkService {
         return NSRange(location: displayRange.location + displayFragment.length, length: 0)
     }
 }
-
