@@ -17,6 +17,10 @@ import AppKit
 
 extension NativeTextViewCoordinator {
 
+    func rawSourceHitRange(atDisplayLocation location: Int) -> NSRange? {
+        WikiLinkService.storageHitRange(atDisplayLocation: location, metadata: wikiLinkMetadata)
+    }
+
     /// The complete leading syntax whose mutation can change list membership,
     /// indentation, or the positional numbering of following ordered items.
     private static let listStructurePrefixRegex = try! NSRegularExpression(
@@ -32,13 +36,41 @@ extension NativeTextViewCoordinator {
     /// Returning the *same* instance for a given document on every call is
     /// required — a fresh manager per call breaks undo.
     public func undoManager(for view: NSTextView) -> UndoManager? {
+        if let documentUndoManager {
+            observeHistoryCompletion(documentUndoManager)
+            return documentUndoManager
+        }
         let key = documentId ?? "__default__"
         if let existing = undoManagers[key] {
+            observeHistoryCompletion(existing)
             return existing
         }
         let manager = UndoManager()
         undoManagers[key] = manager
+        observeHistoryCompletion(manager)
         return manager
+    }
+
+    /// AppKit can replay native text undo without a textDidChange delegate call.
+    /// Publish the completed native edit, once, from the view whose source changed.
+    /// Other mounted views sharing this manager must not publish their old text.
+    private func observeHistoryCompletion(_ manager: UndoManager) {
+        guard observedUndoManager !== manager else { return }
+        for name in [Notification.Name.NSUndoManagerDidUndoChange, .NSUndoManagerDidRedoChange] {
+            NotificationCenter.default.removeObserver(self, name: name, object: observedUndoManager)
+            NotificationCenter.default.addObserver(self, selector: #selector(historyDidComplete(_:)),
+                                                  name: name, object: manager)
+        }
+        observedUndoManager = manager
+    }
+
+    @objc private func historyDidComplete(_ notification: Notification) {
+        guard let view = textView else { return }
+        let storage = configuration.rawSourceMode ? view.string : WikiLinkService.makeStorageState(
+            from: view.string, existingMetadata: wikiLinkMetadata, textStorage: view.textStorage
+        ).storage
+        guard storage != lastComputedStorage else { return }
+        textDidChange(Notification(name: NSText.didChangeNotification, object: view))
     }
 
     /// Drops `documentId`'s undo stack when its switch-away snapshot no longer
@@ -75,6 +107,18 @@ extension NativeTextViewCoordinator {
         return result
     }
 
+    private func publishEditedSource(_ source: String) {
+        let editingDocumentID = documentId
+        let expectedBinding = text
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.documentId == editingDocumentID,
+                  self.lastComputedStorage == source,
+                  self.text == expectedBinding || self.text == self.lastSyncedText || self.text == source else { return }
+            self.lastSyncedText = source
+            self.text = source
+        }
+    }
+
     public func textDidChange(_ notification: Notification) {
         guard let tv = notification.object as? NSTextView else { return }
         PerfTrace.checkpoint("didIn")
@@ -93,17 +137,15 @@ extension NativeTextViewCoordinator {
             guard !tv.hasMarkedText() else { return }
             if tv.string != lastSyncedText {
                 let rawText = tv.string
-                DispatchQueue.main.async {
-                    self.lastSyncedText = rawText
-                    self.text = rawText
-                }
+                lastComputedStorage = rawText
+                publishEditedSource(rawText)
             }
             if let bottomTextView = tv as? NativeTextView,
                let scrollView = tv.enclosingScrollView {
                 bottomTextView.recalcOverscroll(for: scrollView, debugTag: "textDidChange")
                 (scrollView as? ClampedScrollView)?.clampToInsets()
             }
-            if let completedTextMutation {
+            if let completedTextMutation, !isApplyingHostHistory {
                 onTextMutation?(completedTextMutation)
             }
             return
@@ -129,7 +171,7 @@ extension NativeTextViewCoordinator {
         // shouldChangeTextIn. Treat an in-flight undo/redo as structural when
         // it intersects an ordered run below; this preserves numbering while
         // ordinary content keystrokes retain their narrow paragraph scope.
-        let activeUndoManager = undoManagers[documentId ?? "__default__"]
+        let activeUndoManager = documentUndoManager ?? undoManagers[documentId ?? "__default__"]
         let isUndoRedo = activeUndoManager?.isUndoing == true
             || activeUndoManager?.isRedoing == true
         guard !tv.hasMarkedText() else { return }
@@ -197,10 +239,7 @@ extension NativeTextViewCoordinator {
             }
 #endif
             if storageState.storage != self.lastSyncedText {
-                DispatchQueue.main.async {
-                    self.lastSyncedText = storageState.storage
-                    self.text = storageState.storage
-                }
+                publishEditedSource(storageState.storage)
             }
         }
 
@@ -374,7 +413,7 @@ extension NativeTextViewCoordinator {
             }
         }
         previousActiveTokenIndices = activeTokenIndices
-        if let completedTextMutation {
+        if let completedTextMutation, !isApplyingHostHistory {
             onTextMutation?(completedTextMutation)
         }
         PerfTrace.end()
@@ -404,6 +443,15 @@ extension NativeTextViewCoordinator {
         // snap-back branch mutates the text and re-reads explicitly.
         let docText = tv.string
         let nsText = docText as NSString
+        onSourceSelectionChange?(MarkdownSourceSelection(
+            documentID: documentId ?? "__default__",
+            sourceRevision: sourceRevision,
+            displayRange: selRange,
+            storageRange: WikiLinkService.storageRange(
+                forDisplayRange: selRange,
+                metadata: wikiLinkMetadata
+            )
+        ))
         // Mouse-/Wake-Fokus auf Link: kein Preview, erst Navigation. Gilt für alle Nicht-Key-Events.
         if currentEventType != .keyDown,
            selRange.location < nsText.length,
@@ -827,6 +875,32 @@ extension NativeTextViewCoordinator {
         // smart-input interceptors below used to run before the frame existed
         // and were invisible in the printed totals.
         PerfTrace.begin(docLength: preNS.length)
+
+        let preflightUndo = textView.undoManager?.isUndoing == true
+            || textView.undoManager?.isRedoing == true
+        if !isProgrammaticEdit, !isApplyingHostHistory, !isWritingToolsActive,
+           !preflightUndo, !textView.hasMarkedText(),
+           let replacementString,
+           let prepare = onPrepareTextMutation,
+           let sourceRange = WikiLinkService.storageRange(
+               forDisplayRange: affectedCharRange,
+               metadata: wikiLinkMetadata
+           ) {
+            let proposal = MarkdownSourceTextMutation(
+                documentID: documentId ?? "__default__",
+                sourceRevision: sourceRevision,
+                source: lastComputedStorage,
+                range: sourceRange,
+                replacement: replacementString
+            )
+            if let transaction = prepare(proposal) {
+                if applyPreparedTextMutation(transaction, to: textView) {
+                    PerfTrace.end()
+                    return false
+                }
+                onDocumentTransactionResult?(.init(id: transaction.id, applied: false))
+            }
+        }
 
         // Pre-edit parse for the interactive path, BEFORE the generation bump:
         // the text is still pre-edit, so this O(1)-hits the cache the previous

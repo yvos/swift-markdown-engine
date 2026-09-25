@@ -13,17 +13,28 @@ import AppKit
 
 extension NativeTextView {
     override func mouseDown(with event: NSEvent) {
+        let clickedDisplayIndex = characterIndexForInsertion(at: convert(event.locationInWindow, from: nil))
         // Was the click point on a link? Captured before super.mouseDown, which
         // may park the caret elsewhere. Used to rescue a dropped link click.
         let clickPointOnLink: Bool = {
-            let idx = characterIndexForInsertion(at: convert(event.locationInWindow, from: nil))
+            let idx = clickedDisplayIndex
             guard let ts = textStorage, idx >= 0, idx < ts.length else { return false }
             return ts.attribute(.link, at: idx, effectiveRange: nil) != nil
         }()
+        let sourceHitRange = (delegate as? NativeTextViewCoordinator)?.rawSourceHitRange(
+            atDisplayLocation: clickedDisplayIndex
+        )
         var pointerInteraction = NativePointerInteractionSession(
             event: event,
             beganOnLink: clickPointOnLink,
-            onInteraction: onPointerInteraction
+            onInteraction: onPointerInteraction,
+            sourceInteraction: MarkdownSourcePointerInteraction(
+                documentID: sourceDocumentID,
+                sourceRevision: sourceRevision,
+                kind: .content,
+                hitRange: sourceHitRange
+            ),
+            onSourceInteraction: onSourcePointerInteraction
         )
         if consumeTaskCheckboxIfHit(event: event, pointerInteraction: &pointerInteraction) { return }
         if remapClickInParagraphSpacing(event: event) {

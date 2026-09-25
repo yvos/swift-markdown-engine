@@ -56,6 +56,9 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
     /// Push a replacement into the editor by setting this to a non-nil value;
     /// the engine applies it on the next update and then clears the binding.
     @Binding public var pendingInlineReplacement: InlineReplacementRequest?
+    /// One synchronized host text + opaque history-context edit. The request
+    /// is consumed once, whether accepted or rejected as stale.
+    @Binding public var pendingDocumentTransaction: MarkdownDocumentTransaction?
     /// The full editor configuration (theme + services + style toggles). Engine
     /// embedders construct this themselves and pass it in; the wrapper does
     /// not read UserDefaults or know about app-specific colors/services.
@@ -70,6 +73,15 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
     /// dropped only if the document's text changes while it is switched away. Set a
     /// stable, unique value per document so undo/replacements stay scoped.
     public var documentId: String
+    /// Optional host-owned undo manager shared by simultaneous views of one
+    /// logical document.
+    public var documentUndoManager: UndoManager?
+    /// Host revision associated with source-range callbacks. Advance it when
+    /// the Markdown source changes so delayed selections can be rejected.
+    public var sourceRevision: Int
+    /// Optional host-owned live revision read when admitting deferred transactions.
+    /// The value fallback preserves snapshot behavior for other embedders.
+    public var currentSourceRevision: (() -> Int)?
     /// When `false` the editor renders read-only with no caret.
     public var isEditable: Bool
     /// Optional two-way focus state. Set the binding to `true` to request first
@@ -89,6 +101,16 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
     /// is limited to an unmodified, stationary primary click. Defaults to `nil`,
     /// preserving the editor's existing AppKit behavior.
     public var onPointerInteraction: ((MarkdownEditorPointerInteraction) -> Void)?
+    /// Reports the classified pointer action together with its best exact raw
+    /// Markdown hit range. Wiki-link hits identify the complete source token.
+    public var onSourcePointerInteraction: ((MarkdownSourcePointerInteraction) -> Void)?
+    /// Reports keyboard, pointer, and programmatic selection changes in raw
+    /// source coordinates when the display-to-source mapping is exact.
+    public var onSourceSelectionChange: ((MarkdownSourceSelection) -> Void)?
+    /// Restores opaque host state during undo/redo for the named document.
+    public var onHistoryContextRestore: ((String, Data?) -> Void)?
+    /// Reports whether a queued host transaction passed source/revision checks.
+    public var onDocumentTransactionResult: ((MarkdownDocumentTransactionResult) -> Void)?
 
     /// Fires when the user clicks a `[[Name]]` link. The argument is the
     /// resolved opaque identifier (or the display name when no resolver
@@ -101,6 +123,9 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
     /// Multi-step smart-input transformations and ambiguous composition
     /// batches are omitted so embedders can treat every callback as exact.
     public var onTextMutation: ((MarkdownTextMutation) -> Void)?
+    /// Allows a host to atomically transform a proposed raw-source edit and
+    /// attach opaque history context before NSTextView commits the edit.
+    public var onPrepareTextMutation: ((MarkdownSourceTextMutation) -> MarkdownDocumentTransaction?)?
     /// Build the editor's right-click menu (the engine ships no menu). Receives the default
     /// NSMenu + the current selection range; return the menu to display (or unchanged).
     public var onBuildContextMenu: ((NSMenu, NSRange) -> NSMenu)?
@@ -163,18 +188,27 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         text: Binding<String>,
         isWikiLinkActive: Binding<Bool> = .constant(false),
         pendingInlineReplacement: Binding<InlineReplacementRequest?> = .constant(nil),
+        pendingDocumentTransaction: Binding<MarkdownDocumentTransaction?> = .constant(nil),
         configuration: MarkdownEditorConfiguration = .default,
         fontName: String = "SF Pro",
         fontSize: CGFloat = 16,
         documentId: String = "default",
+        documentUndoManager: UndoManager? = nil,
+        sourceRevision: Int = 0,
+        currentSourceRevision: (() -> Int)? = nil,
         isEditable: Bool = true,
         isFocused: Binding<Bool>? = nil,
         allowsTaskCheckboxInteractionWhenReadOnly: Bool = false,
         onPasteImage: ((NSPasteboard) -> String?)? = nil,
         onPointerInteraction: ((MarkdownEditorPointerInteraction) -> Void)? = nil,
+        onSourcePointerInteraction: ((MarkdownSourcePointerInteraction) -> Void)? = nil,
+        onSourceSelectionChange: ((MarkdownSourceSelection) -> Void)? = nil,
+        onHistoryContextRestore: ((String, Data?) -> Void)? = nil,
+        onDocumentTransactionResult: ((MarkdownDocumentTransactionResult) -> Void)? = nil,
         onLinkClick: ((String) -> Void)? = nil,
         onCaretRectChange: ((CGRect) -> Void)? = nil,
         onTextMutation: ((MarkdownTextMutation) -> Void)? = nil,
+        onPrepareTextMutation: ((MarkdownSourceTextMutation) -> MarkdownDocumentTransaction?)? = nil,
         onBuildContextMenu: ((NSMenu, NSRange) -> NSMenu)? = nil,
         onInlineSelectionChange: ((InlineSelectionState?) -> Void)? = nil,
         onInlinePreviewKey: ((InlinePreviewKey) -> Bool)? = nil,
@@ -193,18 +227,27 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         self._text = text
         self._isWikiLinkActive = isWikiLinkActive
         self._pendingInlineReplacement = pendingInlineReplacement
+        self._pendingDocumentTransaction = pendingDocumentTransaction
         self.configuration = configuration
         self.fontName = fontName
         self.fontSize = fontSize
         self.documentId = documentId
+        self.documentUndoManager = documentUndoManager
+        self.sourceRevision = sourceRevision
+        self.currentSourceRevision = currentSourceRevision
         self.isEditable = isEditable
         self.isFocused = isFocused
         self.allowsTaskCheckboxInteractionWhenReadOnly = allowsTaskCheckboxInteractionWhenReadOnly
         self.onPasteImage = onPasteImage
         self.onPointerInteraction = onPointerInteraction
+        self.onSourcePointerInteraction = onSourcePointerInteraction
+        self.onSourceSelectionChange = onSourceSelectionChange
+        self.onHistoryContextRestore = onHistoryContextRestore
+        self.onDocumentTransactionResult = onDocumentTransactionResult
         self.onLinkClick = onLinkClick
         self.onCaretRectChange = onCaretRectChange
         self.onTextMutation = onTextMutation
+        self.onPrepareTextMutation = onPrepareTextMutation
         self.onBuildContextMenu = onBuildContextMenu
         self.onInlineSelectionChange = onInlineSelectionChange
         self.onInlinePreviewKey = onInlinePreviewKey
@@ -318,6 +361,9 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         textView.isAutomaticDashSubstitutionEnabled = false
         textView.onPasteImage = onPasteImage
         textView.onPointerInteraction = onPointerInteraction
+        textView.onSourcePointerInteraction = onSourcePointerInteraction
+        textView.sourceDocumentID = documentId
+        textView.sourceRevision = sourceRevision
         if #available(macOS 15.1, *) {
             // `.limited` = the Writing Tools popover panel; `.complete` = the inline
             // experience that morphs the text with an animation. We use `.limited` so
@@ -358,6 +404,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         context.coordinator.wikiLinkMetadata = initialState.metadata
         context.coordinator.onCaretRectChange = onCaretRectChange
         context.coordinator.onTextMutation = onTextMutation
+        context.coordinator.onPrepareTextMutation = onPrepareTextMutation
         context.coordinator.onBuildContextMenu = onBuildContextMenu
         context.coordinator.onInlineSelectionChange = onInlineSelectionChange
         context.coordinator.onInlinePreviewKey = onInlinePreviewKey
@@ -440,6 +487,13 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         // to reach the CURRENT closures even when the pass below returns early.
         context.coordinator.onPersistScrollOffset = onPersistScrollOffset
         context.coordinator.restoreScrollOffset = restoreScrollOffset
+        context.coordinator.sourceRevision = sourceRevision
+        context.coordinator.currentSourceRevision = currentSourceRevision
+        context.coordinator.documentUndoManager = documentUndoManager
+        context.coordinator.onPrepareTextMutation = onPrepareTextMutation
+        context.coordinator.onSourceSelectionChange = onSourceSelectionChange
+        context.coordinator.onHistoryContextRestore = onHistoryContextRestore
+        context.coordinator.onDocumentTransactionResult = onDocumentTransactionResult
         context.coordinator.isFocused = isFocused
         textView.requestedFocus = isFocused?.wrappedValue
         textView.reconcileRequestedFocus()
@@ -491,6 +545,9 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
 
         textView.onPasteImage = onPasteImage
         textView.onPointerInteraction = onPointerInteraction
+        textView.onSourcePointerInteraction = onSourcePointerInteraction
+        textView.sourceDocumentID = documentId
+        textView.sourceRevision = sourceRevision
         textView.isCursorExcluded = isCursorExcluded
         textView.setPlaceholder(placeholder)
         // Sync heightBehavior across all three layers (scroll view, text view,
@@ -603,6 +660,28 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
             ? (context.coordinator.resolvedCaretColor ?? context.coordinator.configuration.theme.bodyText)
             : .clear
         let fontChanged = (context.coordinator.fontName != fontName) || (context.coordinator.fontSize != fontSize)
+        if let pendingDocumentTransaction {
+            DispatchQueue.main.async {
+                // Claim the shared pending binding before applying it. Another
+                // mounted wrapper or a canonical reload may have consumed it.
+                guard self.pendingDocumentTransaction?.id == pendingDocumentTransaction.id else { return }
+                var failureCode: MarkdownDocumentTransactionFailureCode?
+                let applied = context.coordinator.applyDocumentTransaction(
+                    pendingDocumentTransaction,
+                    to: textView,
+                    failureCode: &failureCode
+                )
+                self.onDocumentTransactionResult?(.init(
+                    id: pendingDocumentTransaction.id,
+                    applied: applied,
+                    failureCode: failureCode
+                ))
+                if self.pendingDocumentTransaction?.id == pendingDocumentTransaction.id {
+                    self.pendingDocumentTransaction = nil
+                }
+            }
+            return
+        }
         if let pendingInlineReplacement {
             if pendingInlineReplacement.documentId == documentId,
                context.coordinator.lastAppliedInlineReplacementID != pendingInlineReplacement.id {
@@ -737,8 +816,16 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
 
         context.coordinator.onCaretRectChange = onCaretRectChange
         context.coordinator.onTextMutation = onTextMutation
+        context.coordinator.onPrepareTextMutation = onPrepareTextMutation
         context.coordinator.onBuildContextMenu = onBuildContextMenu
         context.coordinator.onInlineSelectionChange = onInlineSelectionChange
+        context.coordinator.sourceRevision = sourceRevision
+        context.coordinator.currentSourceRevision = currentSourceRevision
+        context.coordinator.documentUndoManager = documentUndoManager
+        context.coordinator.onPrepareTextMutation = onPrepareTextMutation
+        context.coordinator.onSourceSelectionChange = onSourceSelectionChange
+        context.coordinator.onHistoryContextRestore = onHistoryContextRestore
+        context.coordinator.onDocumentTransactionResult = onDocumentTransactionResult
         context.coordinator.onInlinePreviewKey = onInlinePreviewKey
         context.coordinator.onUnhandledCommand = onUnhandledCommand
         context.coordinator.onCodeBlockSelectionChange = onCodeBlockSelectionChange
@@ -755,8 +842,15 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
             onInlineSelectionChange: onInlineSelectionChange
         )
         coordinator.documentId = documentId
+        coordinator.documentUndoManager = documentUndoManager
+        coordinator.sourceRevision = sourceRevision
+        coordinator.currentSourceRevision = currentSourceRevision
+        coordinator.onSourceSelectionChange = onSourceSelectionChange
+        coordinator.onHistoryContextRestore = onHistoryContextRestore
+        coordinator.onDocumentTransactionResult = onDocumentTransactionResult
         coordinator.onPersistScrollOffset = onPersistScrollOffset
         coordinator.onTextMutation = onTextMutation
+        coordinator.onPrepareTextMutation = onPrepareTextMutation
         coordinator.restoreScrollOffset = restoreScrollOffset
         // Seeding documentId above means the first update pass is not a switch, so
         // arm the restore here or a remount would always open at the top.

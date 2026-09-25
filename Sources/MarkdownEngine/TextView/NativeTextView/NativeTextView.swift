@@ -50,6 +50,9 @@ final class NativeTextView: NSTextView {
     // MARK: Editor wiring
     var onPasteImage: ((NSPasteboard) -> String?)?
     var onPointerInteraction: ((MarkdownEditorPointerInteraction) -> Void)?
+    var onSourcePointerInteraction: ((MarkdownSourcePointerInteraction) -> Void)?
+    var sourceDocumentID = "__default__"
+    var sourceRevision = 0
     var onFocusChange: ((Bool) -> Void)?
     private var reportedFocus = false
     /// `nil` preserves AppKit-owned focus. A value represents the latest
