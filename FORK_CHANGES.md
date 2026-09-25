@@ -1,104 +1,125 @@
-# NoFray fork changes
+# NoFray fork maintenance and changes
 
-This fork release is derived from `nodes-app/swift-markdown-engine` at the
-immutable upstream baseline `08ff3c07b198ed639f595d0279ebac62c0410bc7`.
-The latest published upstream tag when the baseline was frozen was `0.12.0` at
-`e5f7607fc4021181056ef7a09dbb7573dc0237d9`. The fork baseline includes the
-upstream commits after that tag through `08ff3c07b198ed639f595d0279ebac62c0410bc7`
-and no commits after that baseline SHA.
+This is the maintained NoFray fork of
+[`nodes-app/swift-markdown-engine`](https://github.com/nodes-app/swift-markdown-engine).
+The integrated upstream baseline is `00b5e471277ac90c70cf82a31b425dd29ea96663`:
+upstream `0.13.0` (`d1421012aeece640e2c2e47e0e573a93cbe2a420`) plus its subsequent
+fixes through that baseline. NoFray releases do not depend on upstream accepting
+our pull requests.
 
-## Governance
+## Branch and release policy
 
-- `main` remains an unmodified mirror of the frozen upstream baseline.
-- Each upstreamable change lives on its own topic branch and draft pull request.
-- `nofray/integration` is the release branch that combines those reviewed topic
-  commits. It is not merged into `main`.
-- The release tag `0.12.1-nofray.1` points to one integration commit and must
-  never be moved or reused.
-- When upstream accepts an equivalent change, its fork commit is removed during
-  a deliberate rebase rather than maintained as a permanent parallel API.
+- `origin/main` is the single integration and release branch for upstream code
+  plus the tested NoFray extensions. It is **not** an upstream mirror.
+- The `upstream` remote points to the original repository; `upstream/main` is the
+  upstream reference. Do not add a second maintained mirror branch.
+- Use short-lived `codex/...` branches and pull requests targeting this fork's
+  `main`. Keep the source history of upstream imports with ordinary merges;
+  do not squash those imports or rebase published `main`.
+- `nofray/integration` is retired from integration and release work. Its existing
+  reference is historical; no future release should start from it.
+- Releases use unique immutable tags such as `0.13.0-nofray.2`. Never move an
+  existing tag or force-push a published integration branch. Record the exact
+  upstream SHA here even when it is newer than the named upstream release.
+- NoFray uses an exact remote SwiftPM version. A release update includes its
+  resolved revision and license/provenance metadata, followed by verification
+  through the normal remote dependency route.
+- Generic source editing, selection, annotation rendering and opaque undo
+  context belong in this engine. Task, decision and meeting semantics belong
+  in the host application.
 
-## Changes from the upstream baseline
+## Updating upstream
 
-The exact topic and integration commit identities are:
+Use a separate clean worktree so existing development is unaffected. Choose an
+unused branch and worktree name for each update. From the repository:
 
-| Change | Topic commit(s) | Integration commit(s) | Upstream PR |
-| --- | --- | --- | --- |
-| Focus binding | `d5a05413855ba7470a891f9385cbb5c340fae7c1` | `b19a6ebe92d632df50b01b93023a60978e9092ae` | [#175](https://github.com/nodes-app/swift-markdown-engine/pull/175) |
-| Unhandled commands | `bc5e27a2769f50d547748c0fbad82e3fd0107103`, `b0ddb9fc1cdca9261b5617a23df5d4a7496cb6b3` | `f564a90b4bad80febadb657d898f5da9d125d932`, `a017c5a19ed306f839b3d6870d02451fb1b537df` | [#176](https://github.com/nodes-app/swift-markdown-engine/pull/176) |
-| Block formatting | `8285c11ab23f5f29ee36358a5f07232d47e83922` | `eae29d89ce585c52153e8323b781034824623086` | [#177](https://github.com/nodes-app/swift-markdown-engine/pull/177) |
-| Read-only checkbox | `098dc62883d42ff67de20e89fb6730b1501d043b`, `c66fb23d6ecbdd1909a307560f183ae8ed5c8390` | `fc0a97c7d9fb84504ba2d18c70d0684d0bae2b0e`, `f9f5bdc81247ce2540c56262414f7a88af50ec00` | [#178](https://github.com/nodes-app/swift-markdown-engine/pull/178) |
+```sh
+git fetch origin
+git fetch upstream --tags
+git worktree add -b codex/upstream-update ../SwiftMarkdownEngine-upstream-update origin/main
+cd ../SwiftMarkdownEngine-upstream-update
+git merge --no-ff upstream/main
+swift test
+git push -u origin codex/upstream-update
+gh pr create --repo yvos/swift-markdown-engine --base main --head codex/upstream-update
+```
 
-1. Optional two-way editor focus binding. Upstream draft PR
-   [#175](https://github.com/nodes-app/swift-markdown-engine/pull/175).
-2. Synchronous host fallback for unhandled Escape, Tab, and Shift-Tab commands,
-   after preview and list behavior decline them. Upstream draft PR
-   [#176](https://github.com/nodes-app/swift-markdown-engine/pull/176).
-3. Paragraph and task-list block-formatting actions that preserve line endings,
-   selections, attributes, and storage-form wiki-link metadata. Upstream draft
-   PR [#177](https://github.com/nodes-app/swift-markdown-engine/pull/177).
-4. Opt-in task-checkbox interaction in read-only editors, while ordinary text
-   input remains disabled. The sanctioned mutation path reports exact edits and
-   supports document-scoped undo and redo. Upstream draft PR
-   [#178](https://github.com/nodes-app/swift-markdown-engine/pull/178).
-5. An optional `NativeTextViewWrapper.onPointerInteraction` callback classifies
-   native task-checkbox, navigated-link, and ordinary stationary content clicks
-   for host coordination. A per-press session enforces once-only delivery and
-   filters drag selections, modifier-clicks, and link edit-zone clicks from
-   content activation. The callback does not replace wiki-link callbacks or
-   AppKit's normal URL handling and defaults to `nil`.
+For a selected upstream release, merge its verified tag or commit instead of
+`upstream/main`. Review conflicts and behavior before publication. Keep a regular
+merge commit when merging an upstream-update PR; do not use squash/rebase merge.
+Never use `gh repo sync --force`, `reset --hard` or an automatic conflict strategy
+to make the fork match upstream.
 
-These changes satisfy the reusable engine-side contract discussed in upstream
-issue [#173](https://github.com/nodes-app/swift-markdown-engine/issues/173).
-No NoFray application integration is included in this release.
+Before merging, check this ledger, update the baseline SHA and run `swift test`.
+When editor APIs or behavior change, also run the affected NoFray adapter and
+editor-history tests. CI runs package build/tests on this fork's PRs and `main`.
+A clean textual merge alone does not establish behavioral compatibility.
 
-## Release validation
+After merging, create a new unique release tag on the verified `main` commit,
+update NoFray's exact pin and provenance together, and verify package resolution
+and affected tests without a local package override. Check local, tracking and
+live remote commit parity. Remove only the update worktree owned by that task,
+after confirming its changes are retained and its working tree is clean.
 
-Validated on macOS on 2026-09-03:
+## Maintained extensions
 
-- `swift test --filter` over the five relevant suites: 43 tests in 5 suites
-  passed, including existing per-document undo coverage.
-- Clean `swift test`: 510 tests in 72 suites passed.
-- `swift build --product MarkdownEngine`: succeeded.
-- SwiftPM graph inspection: the `MarkdownEngine` target has no dependencies and
-  the `MarkdownEngine` product contains only that target.
-- Debug build of the `MarkdownEngineDemo` macOS scheme with code signing
-  disabled: succeeded.
-- `git diff --check`: clean.
+| Behavior | Regression coverage | Upstream status |
+| --- | --- | --- |
+| Optional two-way focus binding | `FocusBindingTests` | [PR #175](https://github.com/nodes-app/swift-markdown-engine/pull/175), open as of 2026-09-25 |
+| Host fallback for declined Escape, Tab and Shift-Tab | `UnhandledCommandTests` | [PR #176](https://github.com/nodes-app/swift-markdown-engine/pull/176), open as of 2026-09-25 |
+| Paragraph and task-list formatting | `BlockFormattingActionTests` | [PR #177](https://github.com/nodes-app/swift-markdown-engine/pull/177), open as of 2026-09-25 |
+| Opt-in task-checkbox toggles in read-only editors | `ReadOnlyTaskCheckboxTests` | [PR #178](https://github.com/nodes-app/swift-markdown-engine/pull/178), open as of 2026-09-25 |
+| Native pointer classification and exact source hit ranges | `PointerInteractionTests`, `MarkdownSourceRangeTests` | Maintained fork extension |
+| Hidden HTML comments, source transactions and opaque shared undo context | `MarkdownASTStylerTests`, `MarkdownDocumentTransactionTests`, `PreparedTextMutationTests`; NoFray `MeetingDocumentEditorHistoryTests` | Maintained fork extension |
+| Caret visibility during keyboard navigation in internally scrolling editors | `CaretVisibilityTests` | Maintained fork fix |
 
-No package dependency, platform requirement, or license was changed. The
-upstream Apache License 2.0 remains in `LICENSE`; the upstream baseline contains
-no `NOTICE` file. Every modified pre-existing file carries a dated pointer to
-this change record; newly added source and test files are documented here and
-remain covered by the repository's Apache-2.0 license.
+Keep upstream submissions narrowly scoped on separate topic branches based on
+upstream. Existing PRs may stay open independently of fork releases. When
+upstream supplies equivalent behavior, reconcile the implementation in a new
+commit and retain the relevant regression tests; do not rewrite release history.
 
-## Unreleased validation
+## Release provenance
 
-Validated on macOS on 2026-09-04:
+- `0.13.0-nofray.2`: document-review engine APIs, source mapping, native undo and
+  pre-edit hooks, plus caret visibility. Upstream baseline remains `00b5e471`.
+  The engine accepts only document/source revisions, exact source replacements
+  and opaque host state; NoFray owns application semantics.
+- `0.13.0-nofray.1`: `b426d419c1a2c635f36d250091366517d9ca5321`, integrating
+  upstream through `00b5e471277ac90c70cf82a31b425dd29ea96663` and the prior fork.
+- `0.12.1-nofray.2`: `acaed5efd8dc124fd019f9270d2610af6d99e79d`, adding native
+  pointer interaction callbacks.
+- `0.12.1-nofray.1`: `605073321ca299cd5c2c941f8554aff06b667eda`, initial fork
+  release. Its original baseline was `08ff3c07b198ed639f595d0279ebac62c0410bc7`,
+  after upstream `0.12.0` (`e5f7607fc4021181056ef7a09dbb7573dc0237d9`).
 
-- Focused `swift test --filter` over pointer-interaction and read-only checkbox
-  suites: 15 tests in 2 suites passed.
-- Clean `swift test`: 519 tests in 73 suites passed.
-- `swift build --product MarkdownEngine`: succeeded.
+The original topic-to-integration mapping remains available for upstream review:
 
+| Change | Topic commit(s) | Original integration commit(s) |
+| --- | --- | --- |
+| Focus binding | `d5a0541` | `b19a6eb` |
+| Unhandled commands | `bc5e27a`, `b0ddb9f` | `f564a90`, `a017c5a` |
+| Block formatting | `8285c11` | `eae29d8` |
+| Read-only checkbox | `098dc62`, `c66fb23` | `fc0a97c`, `f9f5bdc` |
 
-## Document-review repair candidate (unreleased, 2026-09-24)
+## Preserved development snapshots
 
-This candidate starts at the published `0.13.0-nofray.1` commit
-`b426d419c1a2c635f36d250091366517d9ca5321`. It carries the generic document
-transaction, source-range, hidden-comment and opaque host-history extensions
-from the local review topic onto that updated baseline. The original topic and
-its unrelated caret-scrolling changes have been preserved separately.
+The original pre-0.13 review work is preserved at `f9e9c2c` on
+`codex/meeting-review-annotations`. It is a recovery snapshot, not a release or
+an additional integration line. The repaired review implementation is committed
+at `ca8a412` on `codex/meeting-review-013-repair`; the independent caret fix is
+`55b0965`. Both reviewed changes are merged into the maintained fork. Original
+worktrees remain available to their owning tasks; do not delete them merely
+because the release has advanced.
 
-Native undo completion republishes the edited source through a writable binding.
-Host-triggered renders see the prepared native source before they can rebuild
-storage and move the caret. Inspector transactions own an undo group and queued
-transactions recheck their shared pending binding before applying. Deferred text
-publication rejects a replaced document/buffer. Domain review semantics remain
-in NoFray; the engine handles only source edits and opaque context.
+## Validation and attribution
 
-Validation: 562 core engine tests and 1 LaTeX integration test passed. NoFray's
-14 focused session/history tests passed, including its actual Markdown adapter,
-two mounted editors, native undo/redo, one-time transaction consumption and
-reload invalidation. The normal remote release/pin is still pending; this is
-unpublished source, not a new immutable release.
+On 2026-09-25, `swift test` passed 564 core tests in 79 suites and one LaTeX
+integration test in the combined fork. Release validation is also recorded
+with each GitHub release. Distinguish package
+checks from NoFray integration, manual UI acceptance and live-provider evidence.
+This maintenance change does not claim new manual UI or provider acceptance.
+
+The upstream Apache License 2.0 remains in `LICENSE`; the integrated upstream
+baseline has no `NOTICE` file. No license, platform requirement or package
+dependency is changed by these fork extensions. Generic additions and modified
+files remain covered by that license. This record documents their provenance.
