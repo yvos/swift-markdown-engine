@@ -1,11 +1,31 @@
 # Changelog
 
-> Modified in the NoFray fork on 2026-09-03 and 2026-09-04; see `FORK_CHANGES.md`.
+> Modified in the NoFray fork on 2026-09-03, 2026-09-04 and 2026-09-25; see `FORK_CHANGES.md`.
 
 All notable changes to swift-markdown-engine are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.13.0-nofray.2] - 2026-09-25
+
+### Added
+- Generic document transactions and a synchronous pre-edit hook combine source
+  edits and opaque host metadata in one native undo operation.
+- Source-coordinate pointer and selection callbacks, exact wiki-link range
+  mapping, and opt-in hidden HTML comments support host-authored annotations.
+- Optional host-owned undo managers synchronize simultaneous editor views.
+
+### Fixed
+- Native undo republishes source bindings; deferred edits reject stale document
+  or source revisions and shared pending transactions are consumed once.
+- Internally scrolling TextKit 2 editors keep the caret visible during keyboard
+  navigation, including full-width layouts.
+
+### Changed
+- Maintain `main` as the single fork integration/release branch. Preserve
+  upstream merge history and pin consumers to immutable fork releases; see
+  `FORK_CHANGES.md` for the maintained behavior ledger and update procedure.
 
 ## [Unreleased]
 

@@ -50,6 +50,23 @@ public struct InlineSelectionState: Sendable {
     }
 }
 
+/// The editor's current selection with an explicitly versioned mapping to the
+/// Markdown binding. All ranges are UTF-16 offsets; `storageRange` is nil when
+/// a projected display boundary cannot be mapped exactly to source text.
+public struct MarkdownSourceSelection: Sendable, Equatable {
+    public let documentID: String
+    public let sourceRevision: Int
+    public let displayRange: NSRange
+    public let storageRange: NSRange?
+
+    public init(documentID: String, sourceRevision: Int, displayRange: NSRange, storageRange: NSRange?) {
+        self.documentID = documentID
+        self.sourceRevision = sourceRevision
+        self.displayRange = displayRange
+        self.storageRange = storageRange
+    }
+}
+
 /// A keyboard command forwarded to an open inline preview (the `[[…]]` autocomplete)
 /// via ``NativeTextViewWrapper/onInlinePreviewKey``. The embedder returns `true` to
 /// consume the key (it drove its list), or `false` to let the editor handle it normally.

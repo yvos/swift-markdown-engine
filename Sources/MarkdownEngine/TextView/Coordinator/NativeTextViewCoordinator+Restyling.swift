@@ -13,6 +13,294 @@
 import AppKit
 
 extension NativeTextViewCoordinator {
+
+    @discardableResult
+    func applyPreparedTextMutation(
+        _ transaction: MarkdownDocumentTransaction,
+        to textView: NSTextView
+    ) -> Bool {
+        guard transaction.documentID == documentId,
+              transaction.sourceRevision == sourceRevision,
+              transaction.expectedSource == lastSyncedText,
+              transaction.replacements.count == 1,
+              transaction.historyContextBefore != transaction.historyContextAfter,
+              onHistoryContextRestore != nil,
+              textView.isEditable,
+              let undoManager = undoManager(for: textView) else { return false }
+
+        let source = transaction.expectedSource as NSString
+        let edit = transaction.replacements[0]
+        guard edit.range.location >= 0,
+              edit.range.length >= 0,
+              edit.range.location <= source.length,
+              edit.range.length <= source.length - edit.range.location,
+              let displayRange = WikiLinkService.displayRange(
+                  forStorageRange: edit.range,
+                  metadata: wikiLinkMetadata
+              ) else { return false }
+
+        let replacementDisplay = WikiLinkService.makeDisplayState(
+            from: edit.text,
+            nameForID: { self.configuration.services.wikiLinks.name(forID: $0) }
+        ).display
+        let finalSource = NSMutableString(string: transaction.expectedSource)
+        finalSource.replaceCharacters(in: edit.range, with: edit.text)
+        let finalState = WikiLinkService.makeDisplayState(
+            from: finalSource as String,
+            nameForID: { self.configuration.services.wikiLinks.name(forID: $0) }
+        )
+        let currentDisplay = textView.string as NSString
+        guard displayRange.location >= 0,
+              displayRange.location <= currentDisplay.length,
+              displayRange.length <= currentDisplay.length - displayRange.location else { return false }
+        let predictedDisplay = NSMutableString(string: textView.string)
+        predictedDisplay.replaceCharacters(in: displayRange, with: replacementDisplay)
+        guard predictedDisplay as String == finalState.display else { return false }
+
+        let selectionRange: NSRange?
+        if let selectionAfter = transaction.selectionAfter {
+            guard selectionAfter >= 0, selectionAfter <= finalSource.length,
+                  let mapped = WikiLinkService.displayRange(
+                    forStorageRange: NSRange(location: selectionAfter, length: 0),
+                    metadata: finalState.metadata
+                  ) else { return false }
+            selectionRange = mapped
+        } else {
+            selectionRange = nil
+        }
+
+        textView.breakUndoCoalescing()
+        undoManager.beginUndoGrouping()
+        isProgrammaticEdit = true
+        isApplyingHostHistory = true
+        pendingEditCount = 0
+        pendingEditedRange = nil
+        pendingTextMutation = nil
+        textView.insertText(replacementDisplay, replacementRange: displayRange)
+        if let selectionRange {
+            textView.setSelectedRange(selectionRange)
+        }
+        // Host callbacks may synchronously render SwiftUI. Mark the already
+        // styled native edit as synchronized before that render can rebuild
+        // storage and move the insertion point to the hidden marker's end.
+        lastSyncedText = finalSource as String
+        lastComputedStorage = finalSource as String
+        onHistoryContextRestore?(transaction.documentID, transaction.historyContextAfter)
+        isApplyingHostHistory = false
+        isProgrammaticEdit = false
+        registerHistoryContextUndo(
+            documentID: transaction.documentID,
+            beforeContext: transaction.historyContextBefore,
+            afterContext: transaction.historyContextAfter,
+            restoringBefore: true,
+            manager: undoManager,
+            actionName: transaction.actionName
+        )
+        undoManager.setActionName(transaction.actionName)
+        undoManager.endUndoGrouping()
+        textView.breakUndoCoalescing()
+        onDocumentTransactionResult?(.init(id: transaction.id, applied: true))
+        return true
+    }
+
+    private func registerHistoryContextUndo(
+        documentID: String,
+        beforeContext: Data?,
+        afterContext: Data?,
+        restoringBefore: Bool,
+        manager: UndoManager,
+        actionName: String
+    ) {
+        manager.registerUndo(withTarget: self) { coordinator in
+            guard coordinator.documentId == documentID,
+                  let restore = coordinator.onHistoryContextRestore else { return }
+            restore(documentID, restoringBefore ? beforeContext : afterContext)
+            coordinator.registerHistoryContextUndo(
+                documentID: documentID,
+                beforeContext: beforeContext,
+                afterContext: afterContext,
+                restoringBefore: !restoringBefore,
+                manager: manager,
+                actionName: actionName
+            )
+            manager.setActionName(actionName)
+        }
+        manager.setActionName(actionName)
+    }
+
+    @discardableResult
+    func applyDocumentTransaction(
+        _ transaction: MarkdownDocumentTransaction,
+        to textView: NSTextView,
+        failureCode: inout MarkdownDocumentTransactionFailureCode?
+    ) -> Bool {
+        failureCode = nil
+        guard transaction.documentID == documentId else {
+            failureCode = .documentMismatch
+            return false
+        }
+        let admissionRevision = currentSourceRevision?() ?? sourceRevision
+        guard transaction.sourceRevision == admissionRevision else {
+            failureCode = .sourceRevisionMismatch
+            return false
+        }
+        guard transaction.expectedSource == text else {
+            failureCode = .sourceMismatch
+            return false
+        }
+        guard !transaction.actionName.isEmpty else {
+            failureCode = .invalidAction
+            return false
+        }
+        guard transaction.replacements.count <= 1 else {
+            failureCode = .tooManyReplacements
+            return false
+        }
+        guard transaction.historyContextBefore != transaction.historyContextAfter else {
+            failureCode = .unchangedHistoryContext
+            return false
+        }
+        guard onHistoryContextRestore != nil else {
+            failureCode = .missingHistoryRestore
+            return false
+        }
+        guard textView.isEditable else {
+            failureCode = .readOnly
+            return false
+        }
+        guard let undoManager = undoManager(for: textView) else {
+            failureCode = .undoUnavailable
+            return false
+        }
+
+        let source = transaction.expectedSource as NSString
+        var mapped: [(range: NSRange, replacement: String)] = []
+        for replacement in transaction.replacements {
+            let range = replacement.range
+            guard range.location != NSNotFound,
+                  range.location >= 0,
+                  range.length >= 0,
+                  range.location <= source.length,
+                  range.length <= source.length - range.location else {
+                failureCode = .invalidReplacementRange
+                return false
+            }
+            guard let displayRange = WikiLinkService.displayRange(
+                    forStorageRange: range,
+                    metadata: wikiLinkMetadata
+                  ) else {
+                failureCode = .unmappableDisplayRange
+                return false
+            }
+            mapped.append((displayRange, replacement.text))
+        }
+        let displayLength = (textView.string as NSString).length
+        guard mapped.allSatisfy({
+            $0.range.location >= 0
+                && $0.range.location <= displayLength
+                && $0.range.length <= displayLength - $0.range.location
+        }) else {
+            failureCode = .displayRangeOutOfBounds
+            return false
+        }
+        let edit = mapped.first
+        let oldText: String
+        if let edit {
+            oldText = (textView.string as NSString).substring(with: edit.range)
+        } else {
+            oldText = ""
+        }
+        textView.breakUndoCoalescing()
+        undoManager.beginUndoGrouping()
+        isProgrammaticEdit = true
+        isApplyingHostHistory = true
+        if let edit {
+            textView.textStorage?.replaceCharacters(in: edit.range, with: edit.replacement)
+            textView.setSelectedRange(NSRange(location: edit.range.location + (edit.replacement as NSString).length, length: 0))
+            textView.didChangeText()
+        }
+        onHistoryContextRestore?(transaction.documentID, transaction.historyContextAfter)
+        isApplyingHostHistory = false
+        isProgrammaticEdit = false
+        if let edit {
+            onTextMutation?(MarkdownTextMutation(range: edit.range, replacement: edit.replacement))
+        }
+        textView.breakUndoCoalescing()
+        registerHistoryTransactionUndo(
+            documentID: transaction.documentID,
+            range: edit?.range,
+            beforeText: oldText,
+            afterText: edit?.replacement ?? "",
+            beforeContext: transaction.historyContextBefore,
+            afterContext: transaction.historyContextAfter,
+            restoringBefore: true,
+            manager: undoManager,
+            actionName: transaction.actionName
+        )
+        undoManager.setActionName(transaction.actionName)
+        undoManager.endUndoGrouping()
+        return true
+    }
+
+    private func registerHistoryTransactionUndo(
+        documentID: String,
+        range: NSRange?,
+        beforeText: String,
+        afterText: String,
+        beforeContext: Data?,
+        afterContext: Data?,
+        restoringBefore: Bool,
+        manager: UndoManager,
+        actionName: String
+    ) {
+        manager.registerUndo(withTarget: self) { coordinator in
+            guard coordinator.documentId == documentID,
+                  let textView = coordinator.textView else { return }
+            let current = restoringBefore ? afterText : beforeText
+            let replacement = restoringBefore ? beforeText : afterText
+            if let range {
+                let currentSource = textView.string as NSString
+                let currentRange = NSRange(location: range.location, length: (current as NSString).length)
+                guard currentRange.location >= 0,
+                      currentRange.location <= currentSource.length,
+                      currentRange.length <= currentSource.length - currentRange.location,
+                      currentSource.substring(with: currentRange) == current else { return }
+                coordinator.isProgrammaticEdit = true
+                coordinator.isApplyingHostHistory = true
+                textView.textStorage?.replaceCharacters(in: currentRange, with: replacement)
+                textView.setSelectedRange(NSRange(
+                    location: currentRange.location + (replacement as NSString).length,
+                    length: 0
+                ))
+                textView.didChangeText()
+                coordinator.onHistoryContextRestore?(
+                    documentID,
+                    restoringBefore ? beforeContext : afterContext
+                )
+                coordinator.isApplyingHostHistory = false
+                coordinator.isProgrammaticEdit = false
+                coordinator.onTextMutation?(MarkdownTextMutation(range: currentRange, replacement: replacement))
+            } else {
+                coordinator.onHistoryContextRestore?(
+                    documentID,
+                    restoringBefore ? beforeContext : afterContext
+                )
+            }
+            coordinator.registerHistoryTransactionUndo(
+                documentID: documentID,
+                range: range,
+                beforeText: beforeText,
+                afterText: afterText,
+                beforeContext: beforeContext,
+                afterContext: afterContext,
+                restoringBefore: !restoringBefore,
+                manager: manager,
+                actionName: actionName
+            )
+            manager.setActionName(actionName)
+        }
+        manager.setActionName(actionName)
+    }
     /// Atomically rebuilds contents + base attrs + Markdown styling from storage-form `text`.
     func rebuildTextStorageAndStyle(
         _ textView: NSTextView,
