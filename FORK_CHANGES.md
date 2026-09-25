@@ -47,6 +47,10 @@ The exact topic and integration commit identities are:
    filters drag selections, modifier-clicks, and link edit-zone clicks from
    content activation. The callback does not replace wiki-link callbacks or
    AppKit's normal URL handling and defaults to `nil`.
+6. Internally scrolling editors resolve caret visibility through TextKit 2
+   layout fragments in both full-width and reading-column layouts. This fixes
+   arrow-key navigation moving the insertion point below the viewport without
+   scrolling, while retaining the existing per-document scroll-memory rules.
 
 These changes satisfy the reusable engine-side contract discussed in upstream
 issue [#173](https://github.com/nodes-app/swift-markdown-engine/issues/173).
@@ -78,5 +82,7 @@ Validated on macOS on 2026-09-04:
 
 - Focused `swift test --filter` over pointer-interaction and read-only checkbox
   suites: 15 tests in 2 suites passed.
-- Clean `swift test`: 519 tests in 73 suites passed.
+- Focused `swift test --filter CaretVisibilityTests`: 2 tests in 1 suite passed,
+  including actual `moveDown` responder commands.
+- Clean `swift test`: 521 tests in 74 suites passed.
 - `swift build --product MarkdownEngine`: succeeded.

@@ -67,6 +67,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a larger mark climb toward the top of its line.
 
 ### Changed
+- Caret movement in a full-width, internally scrolling editor now uses TextKit
+  2 fragment geometry to keep the insertion point visible. The inherited
+  `NSTextView.scrollRangeToVisible` path depends on a TextKit 1 layout manager
+  and therefore left keyboard navigation below the viewport without scrolling.
 - An ordered list's painted number no longer reverts to the source digit under
   the caret or a selection. The number is positional, so in a run written
   `1./1./1.` a click inside a marker — or a select-all — flipped every number

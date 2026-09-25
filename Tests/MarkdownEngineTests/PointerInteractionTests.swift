@@ -17,6 +17,31 @@ struct PointerInteractionTests {
         let wrapper = NativeTextViewWrapper(text: .constant(""))
 
         #expect(wrapper.onPointerInteraction == nil)
+        #expect(wrapper.onSourcePointerInteraction == nil)
+        #expect(wrapper.onSourceSelectionChange == nil)
+        #expect(wrapper.configuration.hidesHTMLComments == false)
+    }
+
+    @Test("Source pointer reports the pre-navigation hit in its document revision")
+    func sourcePointerCarriesRawHitAndRevision() throws {
+        var sourceEvents: [MarkdownSourcePointerInteraction] = []
+        let hit = NSRange(location: 12, length: 19)
+        var session = NativePointerInteractionSession(
+            event: try mouseEvent(),
+            beganOnLink: true,
+            onInteraction: nil,
+            sourceInteraction: .init(documentID: "meeting-a", sourceRevision: 7, kind: .content, hitRange: hit),
+            onSourceInteraction: { sourceEvents.append($0) }
+        )
+
+        session.complete(
+            linkDidNavigate: true,
+            linkWasHandled: true,
+            travel: 0,
+            selectionLength: 0
+        )
+
+        #expect(sourceEvents == [.init(documentID: "meeting-a", sourceRevision: 7, kind: .link, hitRange: hit)])
     }
 
     @Test("A navigated wiki link is reported without changing delegate consumption")
