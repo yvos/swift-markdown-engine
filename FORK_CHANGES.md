@@ -81,9 +81,10 @@ commit and retain the relevant regression tests; do not rewrite release history.
 
 ## Release provenance
 
-- `0.13.0-nofray.3` candidate: opt-in relative Markdown-link routing and
-  removal of unused hidden HTML-comment styling. The upstream baseline
-  remains `00b5e471277ac90c70cf82a31b425dd29ea96663`; final merge SHA and immutable tag are pending review and approval.
+- `0.13.0-nofray.3` candidate ([PR #6](https://github.com/yvos/swift-markdown-engine/pull/6)):
+  opt-in relative Markdown-link routing and removal of unused hidden
+  HTML-comment styling. The upstream baseline remains
+  `00b5e471277ac90c70cf82a31b425dd29ea96663`; merge SHA and tag await approval.
 - `0.13.0-nofray.2`: document-review engine APIs, source mapping, native undo and
   pre-edit hooks, plus caret visibility. Upstream baseline remains `00b5e471`.
   The engine accepts only document/source revisions, exact source replacements
@@ -123,7 +124,8 @@ on 2026-09-27 passed `swift test` with 568 core tests in 80 suites and one
 LaTeX test. The NoFray `MarkdownSurfaceAdapterTests` compatibility check used
 a temporary local package override on `origin/main` `aac47830`: 19 passed,
 zero failures or skips. Exact remote-pin verification remains for the later
-NoFray pin task; fork PR CI results will be recorded after publication.
+NoFray pin task. Fork PR #6's [Build & Test (macOS)](https://github.com/yvos/swift-markdown-engine/actions/runs/25485643102)
+passed on candidate code commit `ae1da7b`.
 Release validation is also recorded
 with each GitHub release. Distinguish package
 checks from NoFray integration, manual UI acceptance and live-provider evidence.
