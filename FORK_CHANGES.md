@@ -70,6 +70,7 @@ after confirming its changes are retained and its working tree is clean.
 | Paragraph and task-list formatting | `BlockFormattingActionTests` | [PR #177](https://github.com/nodes-app/swift-markdown-engine/pull/177), open as of 2026-09-25 |
 | Opt-in task-checkbox toggles in read-only editors | `ReadOnlyTaskCheckboxTests` | [PR #178](https://github.com/nodes-app/swift-markdown-engine/pull/178), open as of 2026-09-25 |
 | Native pointer classification and exact source hit ranges | `PointerInteractionTests`, `MarkdownSourceRangeTests` | Maintained fork extension |
+| Opt-in relative Markdown links route to host callbacks | `MarkdownASTStylerTests`, `RelativeMarkdownLinkTests` | Maintained fork extension |
 | Source transactions and opaque shared undo context | `MarkdownDocumentTransactionTests`, `PreparedTextMutationTests` | Maintained fork extension |
 | Caret visibility during keyboard navigation in internally scrolling editors | `CaretVisibilityTests` | Maintained fork fix |
 
@@ -80,6 +81,9 @@ commit and retain the relevant regression tests; do not rewrite release history.
 
 ## Release provenance
 
+- `0.13.0-nofray.3` candidate: opt-in relative Markdown-link routing and
+  removal of unused hidden HTML-comment styling. The upstream baseline
+  remains `00b5e471277ac90c70cf82a31b425dd29ea96663`; final merge SHA and immutable tag are pending review and approval.
 - `0.13.0-nofray.2`: document-review engine APIs, source mapping, native undo and
   pre-edit hooks, plus caret visibility. Upstream baseline remains `00b5e471`.
   The engine accepts only document/source revisions, exact source replacements
@@ -114,7 +118,13 @@ because the release has advanced.
 ## Validation and attribution
 
 On 2026-09-25, `swift test` passed 564 core tests in 79 suites and one LaTeX
-integration test in the combined fork. Release validation is also recorded
+integration test in the combined fork. Candidate `0.13.0-nofray.3` validation
+on 2026-09-27 passed `swift test` with 568 core tests in 80 suites and one
+LaTeX test. The NoFray `MarkdownSurfaceAdapterTests` compatibility check used
+a temporary local package override on `origin/main` `aac47830`: 19 passed,
+zero failures or skips. Exact remote-pin verification remains for the later
+NoFray pin task; fork PR CI results will be recorded after publication.
+Release validation is also recorded
 with each GitHub release. Distinguish package
 checks from NoFray integration, manual UI acceptance and live-provider evidence.
 This maintenance change does not claim new manual UI or provider acceptance.

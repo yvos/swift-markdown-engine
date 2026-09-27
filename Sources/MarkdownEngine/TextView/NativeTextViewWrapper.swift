@@ -112,9 +112,13 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
     /// Reports whether a queued host transaction passed source/revision checks.
     public var onDocumentTransactionResult: ((MarkdownDocumentTransactionResult) -> Void)?
 
-    /// Fires when the user clicks a `[[Name]]` link. The argument is the
-    /// resolved opaque identifier (or the display name when no resolver
-    /// was supplied).
+    /// Fires when the user clicks a wiki link or an opted-in relative
+    /// Markdown link. Wiki links deliver the resolved identifier (or display
+    /// name); relative Markdown links deliver the source target with angle
+    /// brackets and any title removed. The host distinguishes a relative path
+    /// from a wiki-link identifier.
+    /// A routed relative link is consumed without browser navigation when
+    /// this callback is nil.
     public var onLinkClick: ((String) -> Void)?
     /// Fires whenever the caret rect inside an active wiki-link changes,
     /// so embedders can position a follow-the-caret UI.
@@ -589,6 +593,21 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
             // to avoid "Modifying state during view update".
             let coordinator = context.coordinator
             DispatchQueue.main.async { coordinator.isWikiLinkActive = false }
+        }
+        // Changing relative-link routing changes the .link attribute type, so
+        // restyle the current document when the embedder switches this option.
+        let relativeLinkRoutingChanged =
+            context.coordinator.configuration.routesRelativeMarkdownLinksToHost
+                != configuration.routesRelativeMarkdownLinksToHost
+        if relativeLinkRoutingChanged {
+            context.coordinator.configuration.routesRelativeMarkdownLinksToHost =
+                configuration.routesRelativeMarkdownLinksToHost
+            textView.configuration.routesRelativeMarkdownLinksToHost =
+                configuration.routesRelativeMarkdownLinksToHost
+            let fullRange = NSRange(location: 0, length: (textView.string as NSString).length)
+            if fullRange.length > 0 {
+                context.coordinator.restyleParagraphs([fullRange], in: textView)
+            }
         }
         // Sync the input-behavior toggles (auto-close pairs, list helpers).
         // The keystroke handlers read textView.configuration live, but only

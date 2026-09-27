@@ -88,6 +88,44 @@ enum MarkdownASTStyler {
         return attrs
     }
 
+    private static let relativeTargetSchemeRegex = try? NSRegularExpression(
+        pattern: #"^[A-Za-z][A-Za-z0-9+.-]*:"#
+    )
+
+    /// Extract a schemeless, non-absolute relative Markdown destination whose
+    /// path ends in .md, for delivery to the host.
+    ///
+    /// Angle brackets delimit a destination that may contain spaces; otherwise
+    /// whitespace starts an optional Markdown title. The returned target keeps
+    /// its source spelling, including percent escapes, query and fragment.
+    static func relativeMarkdownTarget(_ raw: String) -> String? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let target: String
+        if trimmed.hasPrefix("<") {
+            guard let closingBracket = trimmed.firstIndex(of: ">") else { return nil }
+            target = String(trimmed[trimmed.index(after: trimmed.startIndex)..<closingBracket])
+        } else {
+            target = String(trimmed.prefix { !$0.isWhitespace })
+        }
+
+        guard !target.isEmpty,
+              !target.hasPrefix("/"),
+              !target.hasPrefix("#"),
+              let relativeTargetSchemeRegex,
+              relativeTargetSchemeRegex.firstMatch(
+                  in: target,
+                  range: NSRange(location: 0, length: (target as NSString).length)
+              ) == nil else {
+            return nil
+        }
+
+        let pathEnd = target.firstIndex(where: { $0 == "#" || $0 == "?" }) ?? target.endIndex
+        guard target[..<pathEnd].lowercased().hasSuffix(".md") else { return nil }
+        return target
+    }
+
     // MARK: - Text/regex-based passes (ported 1:1, AST-agnostic)
 
     private static func collectCodeRanges(in blocks: [BlockNode]) -> [NSRange] {
@@ -860,17 +898,27 @@ enum MarkdownASTStyler {
         children: [InlineNode], font: NSFont, ctx: Ctx, into attrs: inout [StyledRange]
     ) {
         attrs.append((range, [.spellingState: 0]))
-        var urlString = ctx.ns.substring(with: urlRange)
-        if !urlString.contains("://") { urlString = "https://\(urlString)" }
+        let rawTarget = ctx.ns.substring(with: urlRange)
+        let routedTarget = ctx.config.routesRelativeMarkdownLinksToHost
+            ? relativeMarkdownTarget(rawTarget)
+            : nil
+        let linkValue: Any?
+        if let routedTarget {
+            linkValue = routedTarget
+        } else {
+            var urlString = rawTarget
+            if !urlString.contains("://") { urlString = "https://\(urlString)" }
+            linkValue = URL(string: urlString)
+        }
         let isActive = ctx.isActive(range)
-        if let url = URL(string: urlString) {
+        if let linkValue {
             if isActive {
                 attrs.append((textRange, [
                     .foregroundColor: ctx.theme.link.withAlphaComponent(ctx.config.link.activeLinkAlpha),
                 ]))
             } else {
                 attrs.append((textRange, [
-                    .link: url,
+                    .link: linkValue,
                     .underlineStyle: NSUnderlineStyle.single.rawValue,
                     .foregroundColor: ctx.theme.link,
                 ]))

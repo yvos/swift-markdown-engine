@@ -75,6 +75,10 @@ public struct MarkdownEditorConfiguration: Sendable {
     /// Runtime-switchable; a flip rebuilds immediately and drops the document's
     /// undo stack (actions from the other mode would replay at stale ranges).
     public var rawSourceMode: Bool
+    /// Routes relative Markdown targets whose path ends in .md, ignoring case,
+    /// to the host callback as source strings. A bare target such as example.md
+    /// is included. Off by default; without a callback, routed clicks do nothing.
+    public var routesRelativeMarkdownLinksToHost: Bool
     /// Opt-in constructs beyond pure markdown (e.g. `==highlight==`). Empty by
     /// default: unregistered syntax stays literal text. Order defines match
     /// precedence among extensions; built-in constructs always win first.
@@ -122,6 +126,7 @@ public struct MarkdownEditorConfiguration: Sendable {
         spellChecking: SpellCheckingPolicy = .default,
         heightBehavior: HeightBehavior = .scrolls,
         rawSourceMode: Bool = false,
+        routesRelativeMarkdownLinksToHost: Bool = false,
         extensions: [any MarkdownExtension] = [],
         cursorFollowsSpanInk: Bool = false,
         directives: [any MarkdownDirective] = [],
@@ -152,6 +157,7 @@ public struct MarkdownEditorConfiguration: Sendable {
         self.spellChecking = spellChecking
         self.heightBehavior = heightBehavior
         self.rawSourceMode = rawSourceMode
+        self.routesRelativeMarkdownLinksToHost = routesRelativeMarkdownLinksToHost
         self.extensions = extensions
         self.cursorFollowsSpanInk = cursorFollowsSpanInk
         self.directives = directives

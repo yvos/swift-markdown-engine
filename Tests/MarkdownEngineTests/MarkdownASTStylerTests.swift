@@ -43,6 +43,87 @@ struct MarkdownASTStylerTests {
         })
     }
 
+    @Test(arguments: [false, true])
+    func relativeMarkdownTargetsPreserveLinkTypesAndPresentation(routesToHost: Bool) {
+        _ = NSApplication.shared
+        let cases: [(raw: String, routedTarget: String?)] = [
+            ("../Tasks/Jaron%20vraagt%20na.md", "../Tasks/Jaron%20vraagt%20na.md"),
+            ("./a.md", "./a.md"),
+            ("a.md", "a.md"),
+            ("Map/Notitie.md#Kop", "Map/Notitie.md#Kop"),
+            ("<../Tasks/Jaron vraagt na.md>", "../Tasks/Jaron vraagt na.md"),
+            ("a.md \"titel\"", "a.md"),
+            ("example.com", nil),
+            ("example.md", "example.md"),
+            ("https://x.y/a.md", nil),
+            ("mailto:a@b.c", nil),
+            ("/abs.md", nil),
+            ("//example.com/a.md", nil),
+            ("#section.md", nil),
+            ("./upper.MD?view=1", "./upper.MD?view=1"),
+        ]
+
+        let configuration = MarkdownEditorConfiguration(
+            routesRelativeMarkdownLinksToHost: routesToHost
+        )
+        for testCase in cases {
+            let source = "[label](\(testCase.raw))"
+            let attributes = MarkdownASTStyler.styleAttributes(
+                text: source,
+                fontName: fontName,
+                fontSize: base,
+                configuration: configuration
+            )
+            let linkValue = attributes.compactMap { $0.attributes[.link] }.first
+
+            if routesToHost, let target = testCase.routedTarget {
+                #expect(linkValue as? String == target)
+                #expect(linkValue as? URL == nil)
+            } else {
+                let legacyString = testCase.raw.contains("://")
+                    ? testCase.raw
+                    : "https://\(testCase.raw)"
+                let expectedURL = URL(string: legacyString)
+                #expect((linkValue as? URL)?.absoluteString == expectedURL?.absoluteString)
+                #expect(linkValue as? String == nil)
+            }
+
+            let labelStyle = attributes.first { $0.attributes[.underlineStyle] != nil }
+            if linkValue != nil {
+                #expect(labelStyle?.attributes[.underlineStyle] as? Int == NSUnderlineStyle.single.rawValue)
+                #expect(labelStyle?.attributes[.foregroundColor] as? NSColor == configuration.theme.link)
+            } else {
+                #expect(labelStyle == nil)
+            }
+        }
+    }
+
+    @Test
+    func activeRelativeMarkdownLinkKeepsEditStyling() {
+        _ = NSApplication.shared
+        let target = "../Tasks/a.md"
+        let source = "[label](\(target))"
+        let configuration = MarkdownEditorConfiguration(routesRelativeMarkdownLinksToHost: true)
+        let attributes = MarkdownASTStyler.styleAttributes(
+            text: source,
+            fontName: fontName,
+            fontSize: base,
+            caretLocation: 2,
+            configuration: configuration
+        )
+        let labelRange = (source as NSString).range(of: "label")
+        let targetRange = (source as NSString).range(of: target)
+        let labelStyle = attributes.first { $0.range == labelRange }
+        let targetStyle = attributes.first { $0.range == targetRange }
+
+        #expect(attributes.allSatisfy { $0.attributes[.link] == nil })
+        #expect(
+            labelStyle?.attributes[.foregroundColor] as? NSColor
+                == configuration.theme.link.withAlphaComponent(configuration.link.activeLinkAlpha)
+        )
+        #expect(targetStyle?.attributes[.foregroundColor] as? NSColor == configuration.theme.mutedText)
+    }
+
     @MainActor
     @Test("scoped list styling matches full effective attribute values")
     func scopedListMatchesFullEffectiveAttributeValues() {
