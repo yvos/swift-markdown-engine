@@ -25,7 +25,7 @@ struct FocusBindingTests {
     @Test("An attached editor fulfills a true request during reconciliation")
     func attachedRequest() throws {
         let textView = NativeTextView(frame: NSRect(x: 0, y: 0, width: 200, height: 100))
-        let other = NSTextField(frame: NSRect(x: 0, y: 110, width: 200, height: 24))
+        let other = FocusTargetView(frame: NSRect(x: 0, y: 110, width: 200, height: 24))
         let window = makeWindow(containing: textView, other)
         try #require(window.makeFirstResponder(other))
 
@@ -50,7 +50,7 @@ struct FocusBindingTests {
     @Test("False only resigns this editor")
     func falseDoesNotDisturbAnotherResponder() throws {
         let textView = NativeTextView(frame: NSRect(x: 0, y: 0, width: 200, height: 100))
-        let other = NSTextField(frame: NSRect(x: 0, y: 110, width: 200, height: 24))
+        let other = FocusTargetView(frame: NSRect(x: 0, y: 110, width: 200, height: 24))
         let window = makeWindow(containing: textView, other)
         try #require(window.makeFirstResponder(other))
         let otherResponder = try #require(window.firstResponder)
@@ -68,7 +68,7 @@ struct FocusBindingTests {
         #expect(wrapper.isFocused == nil)
 
         let textView = NativeTextView(frame: NSRect(x: 0, y: 0, width: 200, height: 100))
-        let other = NSTextField(frame: NSRect(x: 0, y: 110, width: 200, height: 24))
+        let other = FocusTargetView(frame: NSRect(x: 0, y: 110, width: 200, height: 24))
         let window = makeWindow(containing: textView, other)
         try #require(window.makeFirstResponder(other))
         let otherResponder = try #require(window.firstResponder)
@@ -83,7 +83,7 @@ struct FocusBindingTests {
     @Test("First-responder changes are reported once per transition")
     func reportsTransitions() throws {
         let textView = NativeTextView(frame: NSRect(x: 0, y: 0, width: 200, height: 100))
-        let other = NSTextField(frame: NSRect(x: 0, y: 110, width: 200, height: 24))
+        let other = FocusTargetView(frame: NSRect(x: 0, y: 110, width: 200, height: 24))
         let window = makeWindow(containing: textView, other)
         try #require(window.makeFirstResponder(other))
         var changes: [Bool] = []
@@ -119,6 +119,13 @@ struct FocusBindingTests {
 
         #expect(focused == false)
         #expect(writes == 2)
+    }
+
+    /// Focus ownership needs a responder, not another text input client.
+    /// An NSTextField starts a field editor and asynchronous InputMethodKit
+    /// setup, which can race the run-loop work in other AppKit test suites.
+    private final class FocusTargetView: NSView {
+        override var acceptsFirstResponder: Bool { true }
     }
 
     private func makeWindow(containing views: NSView...) -> NSWindow {
