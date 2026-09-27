@@ -81,6 +81,13 @@ commit and retain the relevant regression tests; do not rewrite release history.
 
 ## Release provenance
 
+- `0.13.0-nofray.4` ([PR #9](https://github.com/yvos/swift-markdown-engine/pull/9),
+  [GitHub pre-release](https://github.com/yvos/swift-markdown-engine/releases/tag/0.13.0-nofray.4)):
+  link-activation review fixes from PR #8 (destination spaces, complete titles
+  only, paragraph-scoped autolink detection) and the focus-test fix from PR #7.
+  Merge commit `6ad4628378ef289aa2471bfc4fd8889467e22597`; annotated tag
+  `0.13.0-nofray.4` (`c610941`) dereferences to that commit. Upstream baseline:
+  `00b5e471277ac90c70cf82a31b425dd29ea96663`.
 - `0.13.0-nofray.3` ([PR #6](https://github.com/yvos/swift-markdown-engine/pull/6),
   [GitHub pre-release](https://github.com/yvos/swift-markdown-engine/releases/tag/0.13.0-nofray.3)):
   host-decided link activation and removal of unused hidden HTML-comment
