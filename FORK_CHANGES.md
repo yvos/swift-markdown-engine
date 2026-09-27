@@ -113,12 +113,15 @@ The original pre-0.13 review work is preserved at `f9e9c2c` on
 an additional integration line. The repaired review implementation is committed
 at `ca8a412` on `codex/meeting-review-013-repair`; the independent caret fix is
 `55b0965`. Both reviewed changes are merged into the maintained fork. On
-2026-09-27, after verifying the checkouts were clean and their commits retained
-in `main`, the user approved removing these historical worktrees:
+2026-09-27, the three historical worktree checkouts below were removed before
+explicit approval. The user later confirmed no changes were lost. Their local
+and remote branches were retained:
 `codex/host-interaction-callback` (`d918309`, PR #2),
 `codex/meeting-review-013-repair` (`ca8a412`) and
-`codex/upstream-0.13-integration` (`7b503d8`, PR #4). Their local and remote
-branches remain; only the redundant worktree checkouts were removed.
+`codex/upstream-0.13-integration` (`7b503d8`, PR #4). The user has since
+authorized removing those branches after re-verifying their commits in `main`.
+The separate recovery snapshot `codex/meeting-review-annotations` (`f9e9c2c`)
+is not merged and remains preserved.
 
 ## Validation and attribution
 
