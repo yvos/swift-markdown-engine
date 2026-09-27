@@ -130,6 +130,8 @@ and coverage for host activation, source ranges, and default fallbacks is added.
 NoFray `MarkdownSurfaceAdapterTests` compatibility check used a temporary
 local package override on `origin/main` `aac47830`: 19 passed, zero failures
 or skips. Exact remote-pin verification remains for the later NoFray pin task.
+PR #6 [Build & Test (macOS)](https://github.com/yvos/swift-markdown-engine/actions/runs/36314836791)
+passed on candidate code commit `c6c16ea`.
 Release validation is also recorded
 with each GitHub release. Distinguish package
 checks from NoFray integration, manual UI acceptance and live-provider evidence.
