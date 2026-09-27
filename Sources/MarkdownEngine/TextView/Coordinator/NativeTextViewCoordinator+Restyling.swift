@@ -82,7 +82,7 @@ extension NativeTextViewCoordinator {
         }
         // Host callbacks may synchronously render SwiftUI. Mark the already
         // styled native edit as synchronized before that render can rebuild
-        // storage and move the insertion point to the hidden marker's end.
+        // storage and move the insertion point to the source marker's end.
         lastSyncedText = finalSource as String
         lastComputedStorage = finalSource as String
         onHistoryContextRestore?(transaction.documentID, transaction.historyContextAfter)

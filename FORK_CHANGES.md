@@ -70,7 +70,7 @@ after confirming its changes are retained and its working tree is clean.
 | Paragraph and task-list formatting | `BlockFormattingActionTests` | [PR #177](https://github.com/nodes-app/swift-markdown-engine/pull/177), open as of 2026-09-25 |
 | Opt-in task-checkbox toggles in read-only editors | `ReadOnlyTaskCheckboxTests` | [PR #178](https://github.com/nodes-app/swift-markdown-engine/pull/178), open as of 2026-09-25 |
 | Native pointer classification and exact source hit ranges | `PointerInteractionTests`, `MarkdownSourceRangeTests` | Maintained fork extension |
-| Hidden HTML comments, source transactions and opaque shared undo context | `MarkdownASTStylerTests`, `MarkdownDocumentTransactionTests`, `PreparedTextMutationTests`; NoFray `MeetingDocumentEditorHistoryTests` | Maintained fork extension |
+| Source transactions and opaque shared undo context | `MarkdownDocumentTransactionTests`, `PreparedTextMutationTests` | Maintained fork extension |
 | Caret visibility during keyboard navigation in internally scrolling editors | `CaretVisibilityTests` | Maintained fork fix |
 
 Keep upstream submissions narrowly scoped on separate topic branches based on

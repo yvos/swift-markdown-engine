@@ -43,29 +43,6 @@ struct MarkdownASTStylerTests {
         })
     }
 
-    @Test("HTML annotations hide without changing source ranges and reveal at the caret")
-    func htmlAnnotationsPreserveRangesAndRevealOnEdit() {
-        _ = NSApplication.shared
-        let source = "😀 text <!-- nofray:action:a-1 --> `<!-- literal -->`\n\n```md\n<!-- code -->\n```"
-        let hiddenComment = (source as NSString).range(of: "<!-- nofray:action:a-1 -->")
-        let inlineCodeComment = (source as NSString).range(of: "<!-- literal -->")
-        let fencedCodeComment = (source as NSString).range(of: "<!-- code -->")
-        let configuration = MarkdownEditorConfiguration(hidesHTMLComments: true)
-        let hidden = MarkdownASTStyler.styleAttributes(
-            text: source, fontName: fontName, fontSize: base, configuration: configuration
-        )
-        let revealed = MarkdownASTStyler.styleAttributes(
-            text: source, fontName: fontName, fontSize: base,
-            caretLocation: hiddenComment.location + 8, configuration: configuration
-        )
-
-        #expect(hidden.contains { $0.range == hiddenComment && $0.attributes[.foregroundColor] as? NSColor == .clear })
-        #expect(!hidden.contains { $0.range == inlineCodeComment && $0.attributes[.foregroundColor] as? NSColor == .clear })
-        #expect(!hidden.contains { $0.range == fencedCodeComment && $0.attributes[.foregroundColor] as? NSColor == .clear })
-        #expect(revealed.contains { $0.range == hiddenComment && $0.attributes[.foregroundColor] as? NSColor == configuration.theme.mutedText })
-        #expect(hiddenComment.location == (source as NSString).range(of: "<!-- nofray:action:a-1 -->").location)
-    }
-
     @MainActor
     @Test("scoped list styling matches full effective attribute values")
     func scopedListMatchesFullEffectiveAttributeValues() {

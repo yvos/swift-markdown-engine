@@ -19,7 +19,6 @@ struct PointerInteractionTests {
         #expect(wrapper.onPointerInteraction == nil)
         #expect(wrapper.onSourcePointerInteraction == nil)
         #expect(wrapper.onSourceSelectionChange == nil)
-        #expect(wrapper.configuration.hidesHTMLComments == false)
     }
 
     @Test("Source pointer reports the pre-navigation hit in its document revision")
