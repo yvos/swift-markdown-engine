@@ -112,9 +112,14 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
     /// Reports whether a queued host transaction passed source/revision checks.
     public var onDocumentTransactionResult: ((MarkdownDocumentTransactionResult) -> Void)?
 
-    /// Fires when the user clicks a `[[Name]]` link. The argument is the
-    /// resolved opaque identifier (or the display name when no resolver
-    /// was supplied).
+    /// Gives the host first chance to handle an inline link, wiki link, or
+    /// automatically detected URL. Return `true` to consume the activation;
+    /// `false` preserves the existing wiki-link or AppKit routing.
+    public var onLinkActivation: ((MarkdownLinkActivation) -> Bool)?
+    /// Default wiki-link route when ``onLinkActivation`` is absent or returns
+    /// `false`. Receives the resolved identifier, or the display name when no
+    /// identifier is available. Inline Markdown links and autolinks continue
+    /// through AppKit when the activation callback declines them.
     public var onLinkClick: ((String) -> Void)?
     /// Fires whenever the caret rect inside an active wiki-link changes,
     /// so embedders can position a follow-the-caret UI.
@@ -205,6 +210,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         onSourceSelectionChange: ((MarkdownSourceSelection) -> Void)? = nil,
         onHistoryContextRestore: ((String, Data?) -> Void)? = nil,
         onDocumentTransactionResult: ((MarkdownDocumentTransactionResult) -> Void)? = nil,
+        onLinkActivation: ((MarkdownLinkActivation) -> Bool)? = nil,
         onLinkClick: ((String) -> Void)? = nil,
         onCaretRectChange: ((CGRect) -> Void)? = nil,
         onTextMutation: ((MarkdownTextMutation) -> Void)? = nil,
@@ -244,6 +250,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         self.onSourceSelectionChange = onSourceSelectionChange
         self.onHistoryContextRestore = onHistoryContextRestore
         self.onDocumentTransactionResult = onDocumentTransactionResult
+        self.onLinkActivation = onLinkActivation
         self.onLinkClick = onLinkClick
         self.onCaretRectChange = onCaretRectChange
         self.onTextMutation = onTextMutation
@@ -490,6 +497,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         context.coordinator.sourceRevision = sourceRevision
         context.coordinator.currentSourceRevision = currentSourceRevision
         context.coordinator.documentUndoManager = documentUndoManager
+        context.coordinator.onLinkActivation = onLinkActivation
         context.coordinator.onPrepareTextMutation = onPrepareTextMutation
         context.coordinator.onSourceSelectionChange = onSourceSelectionChange
         context.coordinator.onHistoryContextRestore = onHistoryContextRestore
@@ -838,6 +846,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
             fontName: fontName,
             fontSize: fontSize,
             isWikiLinkActive: $isWikiLinkActive,
+            onLinkActivation: onLinkActivation,
             onLinkClick: onLinkClick,
             onInlineSelectionChange: onInlineSelectionChange
         )

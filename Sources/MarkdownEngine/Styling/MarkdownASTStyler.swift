@@ -85,39 +85,7 @@ enum MarkdownASTStyler {
         let linkRanges = collectLinkRanges(in: blocks)
         styleAutoLinks(ctx: ctx, codeRanges: codeRanges, linkRanges: linkRanges, into: &attrs)
         styleIncompleteLinkBrackets(ctx: ctx, codeRanges: codeRanges, checkboxRanges: checkboxRanges, into: &attrs)
-        if configuration.hidesHTMLComments {
-            styleHTMLComments(in: ns, codeRanges: codeRanges, ctx: ctx, into: &attrs)
-        }
         return attrs
-    }
-
-    private static let htmlCommentRegex = try? NSRegularExpression(pattern: #"<!--[\s\S]*?-->"#)
-
-    /// HTML comments are source annotations, not rendered text. Their ranges
-    /// remain in the backing string so all NSTextView selections continue to
-    /// use exact raw UTF-16 offsets.
-    private static func styleHTMLComments(
-        in text: NSString,
-        codeRanges: [NSRange],
-        ctx: Ctx,
-        into attrs: inout [StyledRange]
-    ) {
-        guard let htmlCommentRegex else { return }
-        let wholeDocument = NSRange(location: 0, length: text.length)
-        for match in htmlCommentRegex.matches(in: text as String, range: wholeDocument) {
-            let range = match.range
-            guard codeRanges.contains(where: { NSLocationInRange(range.location, $0) }) == false,
-                  ctx.inScope(range) else { continue }
-            if ctx.isActive(range) {
-                attrs.append((range, [.foregroundColor: ctx.theme.mutedText]))
-            } else {
-                attrs.append((range, [
-                    .font: ctx.inlineMarkerFont,
-                    .kern: -ctx.inlineMarkerFont.pointSize,
-                    .foregroundColor: NSColor.clear,
-                ]))
-            }
-        }
     }
 
     // MARK: - Text/regex-based passes (ported 1:1, AST-agnostic)
@@ -892,21 +860,30 @@ enum MarkdownASTStyler {
         children: [InlineNode], font: NSFont, ctx: Ctx, into attrs: inout [StyledRange]
     ) {
         attrs.append((range, [.spellingState: 0]))
-        var urlString = ctx.ns.substring(with: urlRange)
+        let rawTarget = ctx.ns.substring(with: urlRange)
+        var urlString = rawTarget
         if !urlString.contains("://") { urlString = "https://\(urlString)" }
-        let isActive = ctx.isActive(range)
+        // Keep syntactically valid inline links clickable even when Foundation
+        // cannot form the legacy URL value (for example, a bracketed
+        // destination containing spaces). The delegate reparses the token
+        // before routing, so this string is only a hit-test value.
+        let linkValue: Any
         if let url = URL(string: urlString) {
-            if isActive {
-                attrs.append((textRange, [
-                    .foregroundColor: ctx.theme.link.withAlphaComponent(ctx.config.link.activeLinkAlpha),
-                ]))
-            } else {
-                attrs.append((textRange, [
-                    .link: url,
-                    .underlineStyle: NSUnderlineStyle.single.rawValue,
-                    .foregroundColor: ctx.theme.link,
-                ]))
-            }
+            linkValue = url
+        } else {
+            linkValue = rawTarget
+        }
+        let isActive = ctx.isActive(range)
+        if isActive {
+            attrs.append((textRange, [
+                .foregroundColor: ctx.theme.link.withAlphaComponent(ctx.config.link.activeLinkAlpha),
+            ]))
+        } else {
+            attrs.append((textRange, [
+                .link: linkValue,
+                .underlineStyle: NSUnderlineStyle.single.rawValue,
+                .foregroundColor: ctx.theme.link,
+            ]))
         }
         for marker in markers { attrs.append((marker, [.foregroundColor: ctx.theme.mutedText])) }
         // The target is syntax, revealed with its brackets and muted like them —

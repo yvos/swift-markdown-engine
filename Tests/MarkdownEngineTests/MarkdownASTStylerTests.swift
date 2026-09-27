@@ -43,27 +43,58 @@ struct MarkdownASTStylerTests {
         })
     }
 
-    @Test("HTML annotations hide without changing source ranges and reveal at the caret")
-    func htmlAnnotationsPreserveRangesAndRevealOnEdit() {
+    @Test
+    func inlineLinksKeepURLBehaviorAndStyleWhenTheURLCannotBeConstructed() {
         _ = NSApplication.shared
-        let source = "😀 text <!-- nofray:action:a-1 --> `<!-- literal -->`\n\n```md\n<!-- code -->\n```"
-        let hiddenComment = (source as NSString).range(of: "<!-- nofray:action:a-1 -->")
-        let inlineCodeComment = (source as NSString).range(of: "<!-- literal -->")
-        let fencedCodeComment = (source as NSString).range(of: "<!-- code -->")
-        let configuration = MarkdownEditorConfiguration(hidesHTMLComments: true)
-        let hidden = MarkdownASTStyler.styleAttributes(
-            text: source, fontName: fontName, fontSize: base, configuration: configuration
+        let configuration = MarkdownEditorConfiguration()
+        let validURLAttributes = MarkdownASTStyler.styleAttributes(
+            text: "[label](example.com)",
+            fontName: fontName,
+            fontSize: base,
+            configuration: configuration
         )
-        let revealed = MarkdownASTStyler.styleAttributes(
-            text: source, fontName: fontName, fontSize: base,
-            caretLocation: hiddenComment.location + 8, configuration: configuration
-        )
+        let validLink = validURLAttributes.first { $0.attributes[.link] != nil }
+        #expect((validLink?.attributes[.link] as? URL)?.absoluteString == "https://example.com")
+        #expect(validLink?.attributes[.underlineStyle] as? Int == NSUnderlineStyle.single.rawValue)
+        #expect(validLink?.attributes[.foregroundColor] as? NSColor == configuration.theme.link)
 
-        #expect(hidden.contains { $0.range == hiddenComment && $0.attributes[.foregroundColor] as? NSColor == .clear })
-        #expect(!hidden.contains { $0.range == inlineCodeComment && $0.attributes[.foregroundColor] as? NSColor == .clear })
-        #expect(!hidden.contains { $0.range == fencedCodeComment && $0.attributes[.foregroundColor] as? NSColor == .clear })
-        #expect(revealed.contains { $0.range == hiddenComment && $0.attributes[.foregroundColor] as? NSColor == configuration.theme.mutedText })
-        #expect(hiddenComment.location == (source as NSString).range(of: "<!-- nofray:action:a-1 -->").location)
+        let spacedSource = "[label](<../Tasks/Jaron vraagt na.md>)"
+        let spacedAttributes = MarkdownASTStyler.styleAttributes(
+            text: spacedSource,
+            fontName: fontName,
+            fontSize: base,
+            configuration: configuration
+        )
+        let spacedLink = spacedAttributes.first { $0.attributes[.link] != nil }
+        #expect(spacedLink != nil)
+        #expect(spacedLink?.attributes[.underlineStyle] as? Int == NSUnderlineStyle.single.rawValue)
+        #expect(spacedLink?.attributes[.foregroundColor] as? NSColor == configuration.theme.link)
+    }
+
+    @Test
+    func activeMarkdownLinkKeepsEditStyling() {
+        _ = NSApplication.shared
+        let target = "../Tasks/Jaron vraagt na.md"
+        let source = "[label](\(target))"
+        let configuration = MarkdownEditorConfiguration()
+        let attributes = MarkdownASTStyler.styleAttributes(
+            text: source,
+            fontName: fontName,
+            fontSize: base,
+            caretLocation: 2,
+            configuration: configuration
+        )
+        let labelRange = (source as NSString).range(of: "label")
+        let targetRange = (source as NSString).range(of: target)
+        let labelStyle = attributes.first { $0.range == labelRange }
+        let targetStyle = attributes.first { $0.range == targetRange }
+
+        #expect(attributes.allSatisfy { $0.attributes[.link] == nil })
+        #expect(
+            labelStyle?.attributes[.foregroundColor] as? NSColor
+                == configuration.theme.link.withAlphaComponent(configuration.link.activeLinkAlpha)
+        )
+        #expect(targetStyle?.attributes[.foregroundColor] as? NSColor == configuration.theme.mutedText)
     }
 
     @MainActor

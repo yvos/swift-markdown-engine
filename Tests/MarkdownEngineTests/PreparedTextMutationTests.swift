@@ -42,7 +42,7 @@ struct PreparedTextMutationTests {
             #expect(proposal.source == source)
             #expect(proposal.range == NSRange(location: 6, length: 0))
             #expect(proposal.replacement == "x")
-            let marked = "- [ ] x <!-- nofray:action:typed -->"
+            let marked = "- [ ] x typed"
             return MarkdownDocumentTransaction(
                 documentID: proposal.documentID,
                 sourceRevision: proposal.sourceRevision,
@@ -70,7 +70,7 @@ struct PreparedTextMutationTests {
 
         textView.insertText("x", replacementRange: NSRange(location: 6, length: 0))
 
-        let marked = "- [ ] x <!-- nofray:action:typed -->"
+        let marked = "- [ ] x typed"
         await flushBindingQueue()
         #expect(buffer == marked)
         #expect(textView.string == marked)
