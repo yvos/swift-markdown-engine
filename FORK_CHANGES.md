@@ -81,10 +81,12 @@ commit and retain the relevant regression tests; do not rewrite release history.
 
 ## Release provenance
 
-- `0.13.0-nofray.3` candidate ([PR #6](https://github.com/yvos/swift-markdown-engine/pull/6)):
+- `0.13.0-nofray.3` ([PR #6](https://github.com/yvos/swift-markdown-engine/pull/6),
+  [GitHub pre-release](https://github.com/yvos/swift-markdown-engine/releases/tag/0.13.0-nofray.3)):
   host-decided link activation and removal of unused hidden HTML-comment
-  styling. The upstream baseline remains
-  `00b5e471277ac90c70cf82a31b425dd29ea96663`; merge SHA and tag await approval.
+  styling. Merge commit `c7a18eb4252ade3cbd1d33047eac872e0445c0f4`; annotated
+  tag `0.13.0-nofray.3` (`da818d7`) dereferences to that commit. Upstream
+  baseline: `00b5e471277ac90c70cf82a31b425dd29ea96663`.
 - `0.13.0-nofray.2`: document-review engine APIs, source mapping, native undo and
   pre-edit hooks, plus caret visibility. Upstream baseline remains `00b5e471`.
   The engine accepts only document/source revisions, exact source replacements
@@ -113,15 +115,16 @@ The original pre-0.13 review work is preserved at `f9e9c2c` on
 an additional integration line. The repaired review implementation is committed
 at `ca8a412` on `codex/meeting-review-013-repair`; the independent caret fix is
 `55b0965`. Both reviewed changes are merged into the maintained fork. On
-2026-09-27, the three historical worktree checkouts below were removed before
-explicit approval. The user later confirmed no changes were lost. Their local
-and remote branches were retained:
-`codex/host-interaction-callback` (`d918309`, PR #2),
-`codex/meeting-review-013-repair` (`ca8a412`) and
-`codex/upstream-0.13-integration` (`7b503d8`, PR #4). The user has since
-authorized removing those branches after re-verifying their commits in `main`.
-The separate recovery snapshot `codex/meeting-review-annotations` (`f9e9c2c`)
-is not merged and remains preserved.
+2026-09-27, three historical worktree checkouts were removed before explicit
+approval; the user later confirmed no changes were lost. After verifying each
+tip as an ancestor of `main` at `c7a18eb`, the user authorized and the operator
+removed their local and remote branches: `codex/host-interaction-callback`
+(`d918309`, PR #2), `codex/meeting-review-013-repair` (`ca8a412`) and
+`codex/upstream-0.13-integration` (`7b503d8`, PR #4). The clean PR #6 worktree
+at `e49d947` was archived after its commits were verified in `main`; its local
+and remote branch `codex/relative-markdown-links` was then removed. The separate
+recovery snapshot `codex/meeting-review-annotations` (`f9e9c2c`) is not merged
+and remains preserved. All `nofray/*` topic branches remain.
 
 ## Validation and attribution
 
@@ -133,8 +136,10 @@ and coverage for host activation, source ranges, and default fallbacks is added.
 NoFray `MarkdownSurfaceAdapterTests` compatibility check used a temporary
 local package override on `origin/main` `aac47830`: 19 passed, zero failures
 or skips. Exact remote-pin verification remains for the later NoFray pin task.
-PR #6 [Build & Test (macOS)](https://github.com/yvos/swift-markdown-engine/actions/runs/36314836791)
-passed on candidate code commit `c6c16ea`.
+PR #6 [Build & Test (macOS)](https://github.com/yvos/swift-markdown-engine/actions/runs/36316891147)
+passed on final PR head `e49d947`. The pre-release notes record this CI run,
+the local package counts and the NoFray compatibility result. No manual UI
+acceptance is claimed.
 Release validation is also recorded
 with each GitHub release. Distinguish package
 checks from NoFray integration, manual UI acceptance and live-provider evidence.
