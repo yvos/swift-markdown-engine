@@ -7,6 +7,11 @@ All notable changes to swift-markdown-engine are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0-nofray.4] - 2026-09-27
+
+### Fixed
+- Preserve interior spaces in link activation destinations, strip only complete titles, and restrict autolink detection to the clicked paragraph.
+
 ## [0.13.0-nofray.3] - 2026-09-27
 
 ### Added
@@ -40,7 +45,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
-- Preserve interior spaces in link activation destinations, strip only complete titles, and restrict autolink detection to the clicked paragraph.
 - A programmatic content swap — a document switch, or the SwiftUI `text` binding
   changing from outside the editor — left the code-block selection pass reading
   the PREVIOUS document's ranges: only the typing and caret paths refreshed that
