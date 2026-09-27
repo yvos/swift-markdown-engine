@@ -112,13 +112,14 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
     /// Reports whether a queued host transaction passed source/revision checks.
     public var onDocumentTransactionResult: ((MarkdownDocumentTransactionResult) -> Void)?
 
-    /// Fires when the user clicks a wiki link or an opted-in relative
-    /// Markdown link. Wiki links deliver the resolved identifier (or display
-    /// name); relative Markdown links deliver the source target with angle
-    /// brackets and any title removed. The host distinguishes a relative path
-    /// from a wiki-link identifier.
-    /// A routed relative link is consumed without browser navigation when
-    /// this callback is nil.
+    /// Gives the host first chance to handle an inline link, wiki link, or
+    /// automatically detected URL. Return `true` to consume the activation;
+    /// `false` preserves the existing wiki-link or AppKit routing.
+    public var onLinkActivation: ((MarkdownLinkActivation) -> Bool)?
+    /// Default wiki-link route when ``onLinkActivation`` is absent or returns
+    /// `false`. Receives the resolved identifier, or the display name when no
+    /// identifier is available. Inline Markdown links and autolinks continue
+    /// through AppKit when the activation callback declines them.
     public var onLinkClick: ((String) -> Void)?
     /// Fires whenever the caret rect inside an active wiki-link changes,
     /// so embedders can position a follow-the-caret UI.
@@ -209,6 +210,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         onSourceSelectionChange: ((MarkdownSourceSelection) -> Void)? = nil,
         onHistoryContextRestore: ((String, Data?) -> Void)? = nil,
         onDocumentTransactionResult: ((MarkdownDocumentTransactionResult) -> Void)? = nil,
+        onLinkActivation: ((MarkdownLinkActivation) -> Bool)? = nil,
         onLinkClick: ((String) -> Void)? = nil,
         onCaretRectChange: ((CGRect) -> Void)? = nil,
         onTextMutation: ((MarkdownTextMutation) -> Void)? = nil,
@@ -248,6 +250,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         self.onSourceSelectionChange = onSourceSelectionChange
         self.onHistoryContextRestore = onHistoryContextRestore
         self.onDocumentTransactionResult = onDocumentTransactionResult
+        self.onLinkActivation = onLinkActivation
         self.onLinkClick = onLinkClick
         self.onCaretRectChange = onCaretRectChange
         self.onTextMutation = onTextMutation
@@ -494,6 +497,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         context.coordinator.sourceRevision = sourceRevision
         context.coordinator.currentSourceRevision = currentSourceRevision
         context.coordinator.documentUndoManager = documentUndoManager
+        context.coordinator.onLinkActivation = onLinkActivation
         context.coordinator.onPrepareTextMutation = onPrepareTextMutation
         context.coordinator.onSourceSelectionChange = onSourceSelectionChange
         context.coordinator.onHistoryContextRestore = onHistoryContextRestore
@@ -593,21 +597,6 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
             // to avoid "Modifying state during view update".
             let coordinator = context.coordinator
             DispatchQueue.main.async { coordinator.isWikiLinkActive = false }
-        }
-        // Changing relative-link routing changes the .link attribute type, so
-        // restyle the current document when the embedder switches this option.
-        let relativeLinkRoutingChanged =
-            context.coordinator.configuration.routesRelativeMarkdownLinksToHost
-                != configuration.routesRelativeMarkdownLinksToHost
-        if relativeLinkRoutingChanged {
-            context.coordinator.configuration.routesRelativeMarkdownLinksToHost =
-                configuration.routesRelativeMarkdownLinksToHost
-            textView.configuration.routesRelativeMarkdownLinksToHost =
-                configuration.routesRelativeMarkdownLinksToHost
-            let fullRange = NSRange(location: 0, length: (textView.string as NSString).length)
-            if fullRange.length > 0 {
-                context.coordinator.restyleParagraphs([fullRange], in: textView)
-            }
         }
         // Sync the input-behavior toggles (auto-close pairs, list helpers).
         // The keystroke handlers read textView.configuration live, but only
@@ -857,6 +846,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
             fontName: fontName,
             fontSize: fontSize,
             isWikiLinkActive: $isWikiLinkActive,
+            onLinkActivation: onLinkActivation,
             onLinkClick: onLinkClick,
             onInlineSelectionChange: onInlineSelectionChange
         )

@@ -88,44 +88,6 @@ enum MarkdownASTStyler {
         return attrs
     }
 
-    private static let relativeTargetSchemeRegex = try? NSRegularExpression(
-        pattern: #"^[A-Za-z][A-Za-z0-9+.-]*:"#
-    )
-
-    /// Extract a schemeless, non-absolute relative Markdown destination whose
-    /// path ends in .md, for delivery to the host.
-    ///
-    /// Angle brackets delimit a destination that may contain spaces; otherwise
-    /// whitespace starts an optional Markdown title. The returned target keeps
-    /// its source spelling, including percent escapes, query and fragment.
-    static func relativeMarkdownTarget(_ raw: String) -> String? {
-        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-
-        let target: String
-        if trimmed.hasPrefix("<") {
-            guard let closingBracket = trimmed.firstIndex(of: ">") else { return nil }
-            target = String(trimmed[trimmed.index(after: trimmed.startIndex)..<closingBracket])
-        } else {
-            target = String(trimmed.prefix { !$0.isWhitespace })
-        }
-
-        guard !target.isEmpty,
-              !target.hasPrefix("/"),
-              !target.hasPrefix("#"),
-              let relativeTargetSchemeRegex,
-              relativeTargetSchemeRegex.firstMatch(
-                  in: target,
-                  range: NSRange(location: 0, length: (target as NSString).length)
-              ) == nil else {
-            return nil
-        }
-
-        let pathEnd = target.firstIndex(where: { $0 == "#" || $0 == "?" }) ?? target.endIndex
-        guard target[..<pathEnd].lowercased().hasSuffix(".md") else { return nil }
-        return target
-    }
-
     // MARK: - Text/regex-based passes (ported 1:1, AST-agnostic)
 
     private static func collectCodeRanges(in blocks: [BlockNode]) -> [NSRange] {
@@ -899,30 +861,29 @@ enum MarkdownASTStyler {
     ) {
         attrs.append((range, [.spellingState: 0]))
         let rawTarget = ctx.ns.substring(with: urlRange)
-        let routedTarget = ctx.config.routesRelativeMarkdownLinksToHost
-            ? relativeMarkdownTarget(rawTarget)
-            : nil
-        let linkValue: Any?
-        if let routedTarget {
-            linkValue = routedTarget
+        var urlString = rawTarget
+        if !urlString.contains("://") { urlString = "https://\(urlString)" }
+        // Keep syntactically valid inline links clickable even when Foundation
+        // cannot form the legacy URL value (for example, a bracketed
+        // destination containing spaces). The delegate reparses the token
+        // before routing, so this string is only a hit-test value.
+        let linkValue: Any
+        if let url = URL(string: urlString) {
+            linkValue = url
         } else {
-            var urlString = rawTarget
-            if !urlString.contains("://") { urlString = "https://\(urlString)" }
-            linkValue = URL(string: urlString)
+            linkValue = rawTarget
         }
         let isActive = ctx.isActive(range)
-        if let linkValue {
-            if isActive {
-                attrs.append((textRange, [
-                    .foregroundColor: ctx.theme.link.withAlphaComponent(ctx.config.link.activeLinkAlpha),
-                ]))
-            } else {
-                attrs.append((textRange, [
-                    .link: linkValue,
-                    .underlineStyle: NSUnderlineStyle.single.rawValue,
-                    .foregroundColor: ctx.theme.link,
-                ]))
-            }
+        if isActive {
+            attrs.append((textRange, [
+                .foregroundColor: ctx.theme.link.withAlphaComponent(ctx.config.link.activeLinkAlpha),
+            ]))
+        } else {
+            attrs.append((textRange, [
+                .link: linkValue,
+                .underlineStyle: NSUnderlineStyle.single.rawValue,
+                .foregroundColor: ctx.theme.link,
+            ]))
         }
         for marker in markers { attrs.append((marker, [.foregroundColor: ctx.theme.mutedText])) }
         // The target is syntax, revealed with its brackets and muted like them —

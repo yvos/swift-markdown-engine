@@ -70,7 +70,7 @@ after confirming its changes are retained and its working tree is clean.
 | Paragraph and task-list formatting | `BlockFormattingActionTests` | [PR #177](https://github.com/nodes-app/swift-markdown-engine/pull/177), open as of 2026-09-25 |
 | Opt-in task-checkbox toggles in read-only editors | `ReadOnlyTaskCheckboxTests` | [PR #178](https://github.com/nodes-app/swift-markdown-engine/pull/178), open as of 2026-09-25 |
 | Native pointer classification and exact source hit ranges | `PointerInteractionTests`, `MarkdownSourceRangeTests` | Maintained fork extension |
-| Opt-in relative Markdown links route to host callbacks | `MarkdownASTStylerTests`, `RelativeMarkdownLinkTests` | Maintained fork extension |
+| Host-decided link activation (`MarkdownLinkActivation`, `onLinkActivation`) | `MarkdownASTStylerTests`, `LinkActivationTests` | Upstream candidate |
 | Source transactions and opaque shared undo context | `MarkdownDocumentTransactionTests`, `PreparedTextMutationTests` | Maintained fork extension |
 | Caret visibility during keyboard navigation in internally scrolling editors | `CaretVisibilityTests` | Maintained fork fix |
 
@@ -82,8 +82,8 @@ commit and retain the relevant regression tests; do not rewrite release history.
 ## Release provenance
 
 - `0.13.0-nofray.3` candidate ([PR #6](https://github.com/yvos/swift-markdown-engine/pull/6)):
-  opt-in relative Markdown-link routing and removal of unused hidden
-  HTML-comment styling. The upstream baseline remains
+  host-decided link activation and removal of unused hidden HTML-comment
+  styling. The upstream baseline remains
   `00b5e471277ac90c70cf82a31b425dd29ea96663`; merge SHA and tag await approval.
 - `0.13.0-nofray.2`: document-review engine APIs, source mapping, native undo and
   pre-edit hooks, plus caret visibility. Upstream baseline remains `00b5e471`.
@@ -112,20 +112,24 @@ The original pre-0.13 review work is preserved at `f9e9c2c` on
 `codex/meeting-review-annotations`. It is a recovery snapshot, not a release or
 an additional integration line. The repaired review implementation is committed
 at `ca8a412` on `codex/meeting-review-013-repair`; the independent caret fix is
-`55b0965`. Both reviewed changes are merged into the maintained fork. Original
-worktrees remain available to their owning tasks; do not delete them merely
-because the release has advanced.
+`55b0965`. Both reviewed changes are merged into the maintained fork. On
+2026-09-27, after verifying the checkouts were clean and their commits retained
+in `main`, the user approved removing these historical worktrees:
+`codex/host-interaction-callback` (`d918309`, PR #2),
+`codex/meeting-review-013-repair` (`ca8a412`) and
+`codex/upstream-0.13-integration` (`7b503d8`, PR #4). Their local and remote
+branches remain; only the redundant worktree checkouts were removed.
 
 ## Validation and attribution
 
 On 2026-09-25, `swift test` passed 564 core tests in 79 suites and one LaTeX
 integration test in the combined fork. Candidate `0.13.0-nofray.3` validation
-on 2026-09-27 passed `swift test` with 568 core tests in 80 suites and one
-LaTeX test. The NoFray `MarkdownSurfaceAdapterTests` compatibility check used
-a temporary local package override on `origin/main` `aac47830`: 19 passed,
-zero failures or skips. Exact remote-pin verification remains for the later
-NoFray pin task. Fork PR #6's [Build & Test (macOS)](https://github.com/yvos/swift-markdown-engine/actions/runs/25485643102)
-passed on candidate code commit `ae1da7b`.
+on 2026-09-27 passed `swift test` with 569 core tests in 80 suites and one
+LaTeX test. Compared with the baseline, the unused HTML-comment test is gone
+and coverage for host activation, source ranges, and default fallbacks is added. The
+NoFray `MarkdownSurfaceAdapterTests` compatibility check used a temporary
+local package override on `origin/main` `aac47830`: 19 passed, zero failures
+or skips. Exact remote-pin verification remains for the later NoFray pin task.
 Release validation is also recorded
 with each GitHub release. Distinguish package
 checks from NoFray integration, manual UI acceptance and live-provider evidence.

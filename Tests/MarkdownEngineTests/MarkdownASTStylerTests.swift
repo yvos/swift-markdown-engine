@@ -43,67 +43,40 @@ struct MarkdownASTStylerTests {
         })
     }
 
-    @Test(arguments: [false, true])
-    func relativeMarkdownTargetsPreserveLinkTypesAndPresentation(routesToHost: Bool) {
+    @Test
+    func inlineLinksKeepURLBehaviorAndStyleWhenTheURLCannotBeConstructed() {
         _ = NSApplication.shared
-        let cases: [(raw: String, routedTarget: String?)] = [
-            ("../Tasks/Jaron%20vraagt%20na.md", "../Tasks/Jaron%20vraagt%20na.md"),
-            ("./a.md", "./a.md"),
-            ("a.md", "a.md"),
-            ("Map/Notitie.md#Kop", "Map/Notitie.md#Kop"),
-            ("<../Tasks/Jaron vraagt na.md>", "../Tasks/Jaron vraagt na.md"),
-            ("a.md \"titel\"", "a.md"),
-            ("example.com", nil),
-            ("example.md", "example.md"),
-            ("https://x.y/a.md", nil),
-            ("mailto:a@b.c", nil),
-            ("/abs.md", nil),
-            ("//example.com/a.md", nil),
-            ("#section.md", nil),
-            ("./upper.MD?view=1", "./upper.MD?view=1"),
-        ]
-
-        let configuration = MarkdownEditorConfiguration(
-            routesRelativeMarkdownLinksToHost: routesToHost
+        let configuration = MarkdownEditorConfiguration()
+        let validURLAttributes = MarkdownASTStyler.styleAttributes(
+            text: "[label](example.com)",
+            fontName: fontName,
+            fontSize: base,
+            configuration: configuration
         )
-        for testCase in cases {
-            let source = "[label](\(testCase.raw))"
-            let attributes = MarkdownASTStyler.styleAttributes(
-                text: source,
-                fontName: fontName,
-                fontSize: base,
-                configuration: configuration
-            )
-            let linkValue = attributes.compactMap { $0.attributes[.link] }.first
+        let validLink = validURLAttributes.first { $0.attributes[.link] != nil }
+        #expect((validLink?.attributes[.link] as? URL)?.absoluteString == "https://example.com")
+        #expect(validLink?.attributes[.underlineStyle] as? Int == NSUnderlineStyle.single.rawValue)
+        #expect(validLink?.attributes[.foregroundColor] as? NSColor == configuration.theme.link)
 
-            if routesToHost, let target = testCase.routedTarget {
-                #expect(linkValue as? String == target)
-                #expect(linkValue as? URL == nil)
-            } else {
-                let legacyString = testCase.raw.contains("://")
-                    ? testCase.raw
-                    : "https://\(testCase.raw)"
-                let expectedURL = URL(string: legacyString)
-                #expect((linkValue as? URL)?.absoluteString == expectedURL?.absoluteString)
-                #expect(linkValue as? String == nil)
-            }
-
-            let labelStyle = attributes.first { $0.attributes[.underlineStyle] != nil }
-            if linkValue != nil {
-                #expect(labelStyle?.attributes[.underlineStyle] as? Int == NSUnderlineStyle.single.rawValue)
-                #expect(labelStyle?.attributes[.foregroundColor] as? NSColor == configuration.theme.link)
-            } else {
-                #expect(labelStyle == nil)
-            }
-        }
+        let spacedSource = "[label](<../Tasks/Jaron vraagt na.md>)"
+        let spacedAttributes = MarkdownASTStyler.styleAttributes(
+            text: spacedSource,
+            fontName: fontName,
+            fontSize: base,
+            configuration: configuration
+        )
+        let spacedLink = spacedAttributes.first { $0.attributes[.link] != nil }
+        #expect(spacedLink != nil)
+        #expect(spacedLink?.attributes[.underlineStyle] as? Int == NSUnderlineStyle.single.rawValue)
+        #expect(spacedLink?.attributes[.foregroundColor] as? NSColor == configuration.theme.link)
     }
 
     @Test
-    func activeRelativeMarkdownLinkKeepsEditStyling() {
+    func activeMarkdownLinkKeepsEditStyling() {
         _ = NSApplication.shared
-        let target = "../Tasks/a.md"
+        let target = "../Tasks/Jaron vraagt na.md"
         let source = "[label](\(target))"
-        let configuration = MarkdownEditorConfiguration(routesRelativeMarkdownLinksToHost: true)
+        let configuration = MarkdownEditorConfiguration()
         let attributes = MarkdownASTStyler.styleAttributes(
             text: source,
             fontName: fontName,

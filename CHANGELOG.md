@@ -1,6 +1,6 @@
 # Changelog
 
-> Modified in the NoFray fork on 2026-09-03, 2026-09-04 and 2026-09-25; see `FORK_CHANGES.md`.
+> Modified in the NoFray fork on 2026-09-03, 2026-09-04, 2026-09-25 and 2026-09-27; see `FORK_CHANGES.md`.
 
 All notable changes to swift-markdown-engine are documented in this file.
 
@@ -10,10 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.13.0-nofray.3] - Unreleased
 
 ### Added
-- Opt-in routing for relative Markdown links whose path ends in .md through the host callback.
+- `onLinkActivation` lets the host decide how inline links, wiki links, and
+  automatically detected URLs are handled, with raw destinations and source
+  ranges.
 
 ### Removed
-- The unused hidden HTML-comment styling extension.
+- The unused `hidesHTMLComments` configuration and HTML-comment styling extension.
 
 ## [0.13.0-nofray.2] - 2026-09-25
 

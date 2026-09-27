@@ -65,12 +65,18 @@ NativeTextViewWrapper(
 )
 ```
 
-The callback runs after the engine handles task checkboxes and navigated
-links. `.content` is reported only for an unmodified, stationary, single
-primary click that was not consumed as a checkbox or link. Drag selections,
+Before the editor applies its default link route,
+``NativeTextViewWrapper/onLinkActivation`` offers the parsed activation to the
+host. It includes the link kind, raw destination, full source range, modifier
+flags and editability. Returning `true` consumes the click; returning `false`
+keeps the existing route, where wiki links use
+``NativeTextViewWrapper/onLinkClick`` and URL links use AppKit.
+
+The pointer callback runs after the engine handles task checkboxes and links.
+`.content` is reported only for an unmodified, stationary, single primary
+click that was not consumed as a checkbox or link. Drag selections,
 modifier-clicks, and link edit-zone clicks do not report `.content`. Omitting
-the callback preserves the existing AppKit behavior, including normal URL
-opening and `onLinkClick` delivery.
+the callbacks preserves the existing default behavior.
 
 ### Customizing Appearance
 
