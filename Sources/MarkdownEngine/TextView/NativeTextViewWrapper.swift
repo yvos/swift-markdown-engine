@@ -73,9 +73,6 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
     /// dropped only if the document's text changes while it is switched away. Set a
     /// stable, unique value per document so undo/replacements stay scoped.
     public var documentId: String
-    /// Optional host-owned undo manager shared by simultaneous views of one
-    /// logical document.
-    public var documentUndoManager: UndoManager?
     /// Host revision associated with source-range callbacks. Advance it when
     /// the Markdown source changes so delayed selections can be rejected.
     public var sourceRevision: Int
@@ -107,8 +104,6 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
     /// Reports keyboard, pointer, and programmatic selection changes in raw
     /// source coordinates when the display-to-source mapping is exact.
     public var onSourceSelectionChange: ((MarkdownSourceSelection) -> Void)?
-    /// Restores opaque host state during undo/redo for the named document.
-    public var onHistoryContextRestore: ((String, Data?) -> Void)?
     /// Reports whether a queued host transaction passed source/revision checks.
     public var onDocumentTransactionResult: ((MarkdownDocumentTransactionResult) -> Void)?
 
@@ -128,9 +123,6 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
     /// Multi-step smart-input transformations and ambiguous composition
     /// batches are omitted so embedders can treat every callback as exact.
     public var onTextMutation: ((MarkdownTextMutation) -> Void)?
-    /// Allows a host to atomically transform a proposed raw-source edit and
-    /// attach opaque history context before NSTextView commits the edit.
-    public var onPrepareTextMutation: ((MarkdownSourceTextMutation) -> MarkdownDocumentTransaction?)?
     /// Build the editor's right-click menu (the engine ships no menu). Receives the default
     /// NSMenu + the current selection range; return the menu to display (or unchanged).
     public var onBuildContextMenu: ((NSMenu, NSRange) -> NSMenu)?
@@ -198,7 +190,6 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         fontName: String = "SF Pro",
         fontSize: CGFloat = 16,
         documentId: String = "default",
-        documentUndoManager: UndoManager? = nil,
         sourceRevision: Int = 0,
         currentSourceRevision: (() -> Int)? = nil,
         isEditable: Bool = true,
@@ -208,13 +199,11 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         onPointerInteraction: ((MarkdownEditorPointerInteraction) -> Void)? = nil,
         onSourcePointerInteraction: ((MarkdownSourcePointerInteraction) -> Void)? = nil,
         onSourceSelectionChange: ((MarkdownSourceSelection) -> Void)? = nil,
-        onHistoryContextRestore: ((String, Data?) -> Void)? = nil,
         onDocumentTransactionResult: ((MarkdownDocumentTransactionResult) -> Void)? = nil,
         onLinkActivation: ((MarkdownLinkActivation) -> Bool)? = nil,
         onLinkClick: ((String) -> Void)? = nil,
         onCaretRectChange: ((CGRect) -> Void)? = nil,
         onTextMutation: ((MarkdownTextMutation) -> Void)? = nil,
-        onPrepareTextMutation: ((MarkdownSourceTextMutation) -> MarkdownDocumentTransaction?)? = nil,
         onBuildContextMenu: ((NSMenu, NSRange) -> NSMenu)? = nil,
         onInlineSelectionChange: ((InlineSelectionState?) -> Void)? = nil,
         onInlinePreviewKey: ((InlinePreviewKey) -> Bool)? = nil,
@@ -238,7 +227,6 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         self.fontName = fontName
         self.fontSize = fontSize
         self.documentId = documentId
-        self.documentUndoManager = documentUndoManager
         self.sourceRevision = sourceRevision
         self.currentSourceRevision = currentSourceRevision
         self.isEditable = isEditable
@@ -248,13 +236,11 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         self.onPointerInteraction = onPointerInteraction
         self.onSourcePointerInteraction = onSourcePointerInteraction
         self.onSourceSelectionChange = onSourceSelectionChange
-        self.onHistoryContextRestore = onHistoryContextRestore
         self.onDocumentTransactionResult = onDocumentTransactionResult
         self.onLinkActivation = onLinkActivation
         self.onLinkClick = onLinkClick
         self.onCaretRectChange = onCaretRectChange
         self.onTextMutation = onTextMutation
-        self.onPrepareTextMutation = onPrepareTextMutation
         self.onBuildContextMenu = onBuildContextMenu
         self.onInlineSelectionChange = onInlineSelectionChange
         self.onInlinePreviewKey = onInlinePreviewKey
@@ -411,7 +397,6 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         context.coordinator.wikiLinkMetadata = initialState.metadata
         context.coordinator.onCaretRectChange = onCaretRectChange
         context.coordinator.onTextMutation = onTextMutation
-        context.coordinator.onPrepareTextMutation = onPrepareTextMutation
         context.coordinator.onBuildContextMenu = onBuildContextMenu
         context.coordinator.onInlineSelectionChange = onInlineSelectionChange
         context.coordinator.onInlinePreviewKey = onInlinePreviewKey
@@ -496,11 +481,8 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         context.coordinator.restoreScrollOffset = restoreScrollOffset
         context.coordinator.sourceRevision = sourceRevision
         context.coordinator.currentSourceRevision = currentSourceRevision
-        context.coordinator.documentUndoManager = documentUndoManager
         context.coordinator.onLinkActivation = onLinkActivation
-        context.coordinator.onPrepareTextMutation = onPrepareTextMutation
         context.coordinator.onSourceSelectionChange = onSourceSelectionChange
-        context.coordinator.onHistoryContextRestore = onHistoryContextRestore
         context.coordinator.onDocumentTransactionResult = onDocumentTransactionResult
         context.coordinator.isFocused = isFocused
         textView.requestedFocus = isFocused?.wrappedValue
@@ -824,15 +806,11 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
 
         context.coordinator.onCaretRectChange = onCaretRectChange
         context.coordinator.onTextMutation = onTextMutation
-        context.coordinator.onPrepareTextMutation = onPrepareTextMutation
         context.coordinator.onBuildContextMenu = onBuildContextMenu
         context.coordinator.onInlineSelectionChange = onInlineSelectionChange
         context.coordinator.sourceRevision = sourceRevision
         context.coordinator.currentSourceRevision = currentSourceRevision
-        context.coordinator.documentUndoManager = documentUndoManager
-        context.coordinator.onPrepareTextMutation = onPrepareTextMutation
         context.coordinator.onSourceSelectionChange = onSourceSelectionChange
-        context.coordinator.onHistoryContextRestore = onHistoryContextRestore
         context.coordinator.onDocumentTransactionResult = onDocumentTransactionResult
         context.coordinator.onInlinePreviewKey = onInlinePreviewKey
         context.coordinator.onUnhandledCommand = onUnhandledCommand
@@ -851,15 +829,12 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
             onInlineSelectionChange: onInlineSelectionChange
         )
         coordinator.documentId = documentId
-        coordinator.documentUndoManager = documentUndoManager
         coordinator.sourceRevision = sourceRevision
         coordinator.currentSourceRevision = currentSourceRevision
         coordinator.onSourceSelectionChange = onSourceSelectionChange
-        coordinator.onHistoryContextRestore = onHistoryContextRestore
         coordinator.onDocumentTransactionResult = onDocumentTransactionResult
         coordinator.onPersistScrollOffset = onPersistScrollOffset
         coordinator.onTextMutation = onTextMutation
-        coordinator.onPrepareTextMutation = onPrepareTextMutation
         coordinator.restoreScrollOffset = restoreScrollOffset
         // Seeding documentId above means the first update pass is not a switch, so
         // arm the restore here or a remount would always open at the top.

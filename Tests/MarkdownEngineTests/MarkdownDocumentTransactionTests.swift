@@ -7,7 +7,7 @@ import Testing
 @Suite(.serialized)
 struct MarkdownDocumentTransactionTests {
     @Test
-    func textAndOpaqueHostContextUndoAndRedoAsOneDocumentAction() throws {
+    func textTransactionUndoAndRedoNeedsNoHostHistoryContext() throws {
         _ = NSApplication.shared
         let coordinator = NativeTextViewCoordinator(
             text: .constant("abc"),
@@ -20,11 +20,6 @@ struct MarkdownDocumentTransactionTests {
         coordinator.documentId = "meeting-a"
         coordinator.sourceRevision = 2
         coordinator.currentSourceRevision = { 3 }
-        var restoredContexts: [Data?] = []
-        coordinator.onHistoryContextRestore = { documentID, context in
-            #expect(documentID == "meeting-a")
-            restoredContexts.append(context)
-        }
         let textView = NativeTextView(frame: .zero)
         textView.string = "abc"
         textView.isEditable = true
@@ -36,38 +31,31 @@ struct MarkdownDocumentTransactionTests {
         )
         window.contentView = textView
         window.makeFirstResponder(textView)
-        let before = Data([1])
-        let after = Data([2])
         let transaction = MarkdownDocumentTransaction(
             documentID: "meeting-a",
             sourceRevision: 3,
             expectedSource: "abc",
             replacements: [.init(range: NSRange(location: 1, length: 1), text: "X")],
-            historyContextBefore: before,
-            historyContextAfter: after,
-            actionName: "Edit annotated document"
+            actionName: "Edit document"
         )
 
         var failureCode: MarkdownDocumentTransactionFailureCode?
         #expect(coordinator.applyDocumentTransaction(transaction, to: textView, failureCode: &failureCode))
         #expect(failureCode == nil)
         #expect(textView.string == "aXc")
-        #expect(restoredContexts == [after])
 
         let manager = try #require(coordinator.undoManager(for: textView))
         #expect(manager.canUndo)
         manager.undo()
         #expect(textView.string == "abc")
-        #expect(restoredContexts == [after, before])
 
         manager.redo()
         #expect(textView.string == "aXc")
-        #expect(restoredContexts == [after, before, after])
         window.orderOut(nil)
     }
 
     @Test
-    func staleDocumentRevisionRejectsTransactionWithoutChangingTextOrContext() {
+    func staleDocumentRevisionRejectsTransactionWithoutChangingText() {
         _ = NSApplication.shared
         let coordinator = NativeTextViewCoordinator(
             text: .constant("abc"),
@@ -79,7 +67,6 @@ struct MarkdownDocumentTransactionTests {
         )
         coordinator.documentId = "meeting-a"
         coordinator.sourceRevision = 4
-        coordinator.onHistoryContextRestore = { _, _ in Issue.record("stale transaction restored context") }
         let textView = NativeTextView(frame: .zero)
         textView.string = "abc"
         textView.isEditable = true
@@ -90,9 +77,7 @@ struct MarkdownDocumentTransactionTests {
             sourceRevision: 3,
             expectedSource: "abc",
             replacements: [.init(range: NSRange(location: 1, length: 1), text: "X")],
-            historyContextBefore: Data([1]),
-            historyContextAfter: Data([2]),
-            actionName: "Edit annotated document"
+            actionName: "Edit document"
         )
 
         var failureCode: MarkdownDocumentTransactionFailureCode?
