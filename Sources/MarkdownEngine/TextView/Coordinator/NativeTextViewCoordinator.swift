@@ -79,6 +79,7 @@ public final class NativeTextViewCoordinator: NSObject, NSTextViewDelegate {
     var layoutBridge: LayoutBridge?
     var layoutDelegate: MarkdownLayoutManagerDelegate?
     var onLinkActivation: ((MarkdownLinkActivation) -> Bool)?
+    var onTaskCheckboxActivation: ((MarkdownTaskCheckboxActivation) -> Bool)?
     var onLinkClick: ((String) -> Void)?
     var onCaretRectChange: ((CGRect) -> Void)?
     var onTextMutation: ((MarkdownTextMutation) -> Void)?

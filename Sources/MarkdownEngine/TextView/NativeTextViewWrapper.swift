@@ -111,6 +111,10 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
     /// automatically detected URL. Return `true` to consume the activation;
     /// `false` preserves the existing wiki-link or AppKit routing.
     public var onLinkActivation: ((MarkdownLinkActivation) -> Bool)?
+    /// Offers checkbox clicks to the host, including in read-only views. `true`
+    /// suppresses the text toggle and undo step, while still reporting a
+    /// `.taskCheckbox` pointer interaction. `nil`/`false` preserves default behavior.
+    public var onTaskCheckboxActivation: ((MarkdownTaskCheckboxActivation) -> Bool)?
     /// Default wiki-link route when ``onLinkActivation`` is absent or returns
     /// `false`. Receives the resolved identifier, or the display name when no
     /// identifier is available. Inline Markdown links and autolinks continue
@@ -201,6 +205,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         onSourceSelectionChange: ((MarkdownSourceSelection) -> Void)? = nil,
         onDocumentTransactionResult: ((MarkdownDocumentTransactionResult) -> Void)? = nil,
         onLinkActivation: ((MarkdownLinkActivation) -> Bool)? = nil,
+        onTaskCheckboxActivation: ((MarkdownTaskCheckboxActivation) -> Bool)? = nil,
         onLinkClick: ((String) -> Void)? = nil,
         onCaretRectChange: ((CGRect) -> Void)? = nil,
         onTextMutation: ((MarkdownTextMutation) -> Void)? = nil,
@@ -238,6 +243,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         self.onSourceSelectionChange = onSourceSelectionChange
         self.onDocumentTransactionResult = onDocumentTransactionResult
         self.onLinkActivation = onLinkActivation
+        self.onTaskCheckboxActivation = onTaskCheckboxActivation
         self.onLinkClick = onLinkClick
         self.onCaretRectChange = onCaretRectChange
         self.onTextMutation = onTextMutation
@@ -482,6 +488,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         context.coordinator.sourceRevision = sourceRevision
         context.coordinator.currentSourceRevision = currentSourceRevision
         context.coordinator.onLinkActivation = onLinkActivation
+        context.coordinator.onTaskCheckboxActivation = onTaskCheckboxActivation
         context.coordinator.onSourceSelectionChange = onSourceSelectionChange
         context.coordinator.onDocumentTransactionResult = onDocumentTransactionResult
         context.coordinator.isFocused = isFocused
@@ -829,6 +836,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
             onInlineSelectionChange: onInlineSelectionChange
         )
         coordinator.documentId = documentId
+        coordinator.onTaskCheckboxActivation = onTaskCheckboxActivation
         coordinator.sourceRevision = sourceRevision
         coordinator.currentSourceRevision = currentSourceRevision
         coordinator.onSourceSelectionChange = onSourceSelectionChange

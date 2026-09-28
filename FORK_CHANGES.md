@@ -71,6 +71,7 @@ after confirming its changes are retained and its working tree is clean.
 | Opt-in task-checkbox toggles in read-only editors | `ReadOnlyTaskCheckboxTests` | [PR #178](https://github.com/nodes-app/swift-markdown-engine/pull/178), open as of 2026-09-25 |
 | Native pointer classification and exact source hit ranges | `PointerInteractionTests`, `MarkdownSourceRangeTests` | Maintained fork extension |
 | Host-decided link activation (`MarkdownLinkActivation`, `onLinkActivation`), preserving destination spaces and detecting autolinks only in the clicked paragraph | `MarkdownASTStylerTests`, `LinkActivationTests`, `LinkDestinationTests` (titles, whitespace, later-paragraph source ranges) | [PR #192](https://github.com/nodes-app/swift-markdown-engine/pull/192); review fixes released in `0.13.0-nofray.4` |
+| Host-decided checkbox activation, including read-only views, without native text/undo mutation when handled | `TaskCheckboxActivationTests`, `ReadOnlyTaskCheckboxTests` | A2, generic upstream candidate |
 | Source transactions with document-local text undo | `MarkdownDocumentTransactionTests`, `NativeTypingHistoryTests` | Maintained fork extension |
 | Caret visibility during keyboard navigation in internally scrolling editors | `CaretVisibilityTests` | Maintained fork fix |
 

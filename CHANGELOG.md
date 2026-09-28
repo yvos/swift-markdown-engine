@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `onTaskCheckboxActivation` offers checkbox clicks and raw source ranges to the
+  host, including in read-only views. Handled actions report `.taskCheckbox`
+  without a text mutation or undo entry; declined actions keep existing behavior.
+
 ### Removed
 - Unused prepared-text-mutation hooks, shared document undo managers, and opaque
   document-transaction history context. Source transactions retain text undo
