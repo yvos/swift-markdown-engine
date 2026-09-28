@@ -93,8 +93,13 @@ typing and transaction undo/redo regressions remain. This is an intentional
 fork API removal. [PR #10](https://github.com/yvos/swift-markdown-engine/pull/10)
 keeps cleanup and checkbox behavior in separate commits. CI run `36435078839`
 built successfully and passed 576 tests in 83 suites on `5699b60`, including
-native typing/transaction undo and checkbox source-range regressions. The NoFray
-compatibility build is still required before merge/tag; no release is claimed.
+native typing/transaction undo and checkbox source-range regressions. The latest
+code/docs candidate `00b58b2` also passed CI run `36435623256`. NoFray compatibility
+built successfully in its disposable `meeting-checkbox-compat` worktree at
+`fcd768a8`, using the remote revision `00b58b2`: wrapper preflight
+`20260928-170059-preflight-2za_zxkw` and Debug build
+`20260928-181219-build-q43a14qk` (38.92 seconds). This proves compilation; NoFray
+adapter/history tests follow the immutable release pin. Merge/tag still pending.
 
 ## Release provenance
 
