@@ -141,10 +141,6 @@ extension NativeTextViewCoordinator {
     /// Returning the *same* instance for a given document on every call is
     /// required — a fresh manager per call breaks undo.
     public func undoManager(for view: NSTextView) -> UndoManager? {
-        if let documentUndoManager {
-            observeHistoryCompletion(documentUndoManager)
-            return documentUndoManager
-        }
         let key = documentId ?? "__default__"
         if let existing = undoManagers[key] {
             observeHistoryCompletion(existing)
@@ -276,7 +272,7 @@ extension NativeTextViewCoordinator {
         // shouldChangeTextIn. Treat an in-flight undo/redo as structural when
         // it intersects an ordered run below; this preserves numbering while
         // ordinary content keystrokes retain their narrow paragraph scope.
-        let activeUndoManager = documentUndoManager ?? undoManagers[documentId ?? "__default__"]
+        let activeUndoManager = undoManagers[documentId ?? "__default__"]
         let isUndoRedo = activeUndoManager?.isUndoing == true
             || activeUndoManager?.isRedoing == true
         guard !tv.hasMarkedText() else { return }
@@ -980,32 +976,6 @@ extension NativeTextViewCoordinator {
         // smart-input interceptors below used to run before the frame existed
         // and were invisible in the printed totals.
         PerfTrace.begin(docLength: preNS.length)
-
-        let preflightUndo = textView.undoManager?.isUndoing == true
-            || textView.undoManager?.isRedoing == true
-        if !isProgrammaticEdit, !isApplyingHostHistory, !isWritingToolsActive,
-           !preflightUndo, !textView.hasMarkedText(),
-           let replacementString,
-           let prepare = onPrepareTextMutation,
-           let sourceRange = WikiLinkService.storageRange(
-               forDisplayRange: affectedCharRange,
-               metadata: wikiLinkMetadata
-           ) {
-            let proposal = MarkdownSourceTextMutation(
-                documentID: documentId ?? "__default__",
-                sourceRevision: sourceRevision,
-                source: lastComputedStorage,
-                range: sourceRange,
-                replacement: replacementString
-            )
-            if let transaction = prepare(proposal) {
-                if applyPreparedTextMutation(transaction, to: textView) {
-                    PerfTrace.end()
-                    return false
-                }
-                onDocumentTransactionResult?(.init(id: transaction.id, applied: false))
-            }
-        }
 
         // Pre-edit parse for the interactive path, BEFORE the generation bump:
         // the text is still pre-edit, so this O(1)-hits the cache the previous

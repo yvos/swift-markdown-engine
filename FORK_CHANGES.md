@@ -71,13 +71,35 @@ after confirming its changes are retained and its working tree is clean.
 | Opt-in task-checkbox toggles in read-only editors | `ReadOnlyTaskCheckboxTests` | [PR #178](https://github.com/nodes-app/swift-markdown-engine/pull/178), open as of 2026-09-25 |
 | Native pointer classification and exact source hit ranges | `PointerInteractionTests`, `MarkdownSourceRangeTests` | Maintained fork extension |
 | Host-decided link activation (`MarkdownLinkActivation`, `onLinkActivation`), preserving destination spaces and detecting autolinks only in the clicked paragraph | `MarkdownASTStylerTests`, `LinkActivationTests`, `LinkDestinationTests` (titles, whitespace, later-paragraph source ranges) | [PR #192](https://github.com/nodes-app/swift-markdown-engine/pull/192); review fixes released in `0.13.0-nofray.4` |
-| Source transactions and opaque shared undo context | `MarkdownDocumentTransactionTests`, `PreparedTextMutationTests` | Maintained fork extension |
+| Host-decided checkbox activation, including read-only views, without native text/undo mutation when handled | `TaskCheckboxActivationTests`, `ReadOnlyTaskCheckboxTests` | A2, generic upstream candidate |
+| Source transactions with document-local text undo | `MarkdownDocumentTransactionTests`, `NativeTypingHistoryTests` | Maintained fork extension |
 | Caret visibility during keyboard navigation in internally scrolling editors | `CaretVisibilityTests` | Maintained fork fix |
 
 Keep upstream submissions narrowly scoped on separate topic branches based on
 upstream. Existing PRs may stay open independently of fork releases. When
 upstream supplies equivalent behavior, reconcile the implementation in a new
 commit and retain the relevant regression tests; do not rewrite release history.
+
+## A2 / 0.13.0-nofray.5 candidate
+
+The NoFray P3 consumer uses edit-session boundaries and remounts the document
+after external source replacement. It has no callers of the prepared mutation
+hook, a shared document undo manager, or opaque history-context callbacks.
+Remove `onPrepareTextMutation`, `applyPreparedTextMutation`,
+`MarkdownSourceTextMutation`, `documentUndoManager`, and transaction history
+context fields/callbacks. Ordinary source transactions retain revision checks and
+native text undo/redo; they no longer require invented host metadata. Native
+typing and transaction undo/redo regressions remain. This is an intentional
+fork API removal. [PR #10](https://github.com/yvos/swift-markdown-engine/pull/10)
+keeps cleanup and checkbox behavior in separate commits. CI run `36435078839`
+built successfully and passed 576 tests in 83 suites on `5699b60`, including
+native typing/transaction undo and checkbox source-range regressions. The latest
+code/docs candidate `00b58b2` also passed CI run `36435623256`. NoFray compatibility
+built successfully in its disposable `meeting-checkbox-compat` worktree at
+`fcd768a8`, using the remote revision `00b58b2`: wrapper preflight
+`20260928-170059-preflight-2za_zxkw` and Debug build
+`20260928-181219-build-q43a14qk` (38.92 seconds). This proves compilation; NoFray
+adapter/history tests follow the immutable release pin. Merge/tag still pending.
 
 ## Release provenance
 

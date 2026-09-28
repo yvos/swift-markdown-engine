@@ -6,9 +6,9 @@ import Testing
 
 @MainActor
 @Suite(.serialized)
-struct PreparedTextMutationTests {
+struct NativeTypingHistoryTests {
     @Test
-    func typedCheckboxAndHostContextUndoAndRedoTogether() async throws {
+    func typedCheckboxTextUsesNativeUndoAndRedo() async throws {
         _ = NSApplication.shared
         let source = "- [ ] "
         var buffer = source
@@ -25,37 +25,6 @@ struct PreparedTextMutationTests {
         coordinator.lastSyncedText = source
         coordinator.lastComputedStorage = source
 
-        let before = Data([1])
-        let after = Data([2])
-        var restored: [Data?] = []
-        var results: [Bool] = []
-        coordinator.onHistoryContextRestore = { id, context in
-            #expect(id == "meeting-prepared")
-            restored.append(context)
-        }
-        coordinator.onDocumentTransactionResult = { result in
-            results.append(result.applied)
-        }
-        coordinator.onPrepareTextMutation = { proposal in
-            #expect(proposal.documentID == "meeting-prepared")
-            #expect(proposal.sourceRevision == 7)
-            #expect(proposal.source == source)
-            #expect(proposal.range == NSRange(location: 6, length: 0))
-            #expect(proposal.replacement == "x")
-            let marked = "- [ ] x typed"
-            return MarkdownDocumentTransaction(
-                documentID: proposal.documentID,
-                sourceRevision: proposal.sourceRevision,
-                expectedSource: proposal.source,
-                replacements: [.init(range: NSRange(location: 0, length: (source as NSString).length),
-                                     text: marked)],
-                selectionAfter: ("- [ ] x" as NSString).length,
-                historyContextBefore: before,
-                historyContextAfter: after,
-                actionName: "Add meeting action"
-            )
-        }
-
         let textView = NativeTextView(frame: .zero)
         textView.allowsUndo = true
         textView.string = source
@@ -70,26 +39,22 @@ struct PreparedTextMutationTests {
 
         textView.insertText("x", replacementRange: NSRange(location: 6, length: 0))
 
-        let marked = "- [ ] x typed"
+        let marked = "- [ ] x"
         await flushBindingQueue()
         #expect(buffer == marked)
         #expect(textView.string == marked)
         #expect(textView.selectedRange().location == ("- [ ] x" as NSString).length)
-        #expect(restored == [after])
-        #expect(results == [true])
 
         let undoManager = try #require(coordinator.undoManager(for: textView))
         undoManager.undo()
         await flushBindingQueue()
         #expect(buffer == source)
         #expect(textView.string == source)
-        #expect(restored == [after, before])
 
         undoManager.redo()
         await flushBindingQueue()
         #expect(buffer == marked)
         #expect(textView.string == marked)
-        #expect(restored == [after, before, after])
         window.orderOut(nil)
     }
     private func flushBindingQueue() async {

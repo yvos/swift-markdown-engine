@@ -20,8 +20,6 @@ public struct MarkdownDocumentTransaction: Sendable, Equatable, Identifiable {
     public let replacements: [Replacement]
     /// Optional caret offset in the resulting raw Markdown source.
     public let selectionAfter: Int?
-    public let historyContextBefore: Data?
-    public let historyContextAfter: Data?
     public let actionName: String
 
     public init(
@@ -31,8 +29,6 @@ public struct MarkdownDocumentTransaction: Sendable, Equatable, Identifiable {
         expectedSource: String,
         replacements: [Replacement],
         selectionAfter: Int? = nil,
-        historyContextBefore: Data?,
-        historyContextAfter: Data?,
         actionName: String
     ) {
         self.id = id
@@ -41,8 +37,6 @@ public struct MarkdownDocumentTransaction: Sendable, Equatable, Identifiable {
         self.expectedSource = expectedSource
         self.replacements = replacements
         self.selectionAfter = selectionAfter
-        self.historyContextBefore = historyContextBefore
-        self.historyContextAfter = historyContextAfter
         self.actionName = actionName
     }
 }
@@ -54,8 +48,6 @@ public enum MarkdownDocumentTransactionFailureCode: String, Sendable, Equatable 
     case sourceMismatch
     case invalidAction
     case tooManyReplacements
-    case unchangedHistoryContext
-    case missingHistoryRestore
     case readOnly
     case undoUnavailable
     case invalidReplacementRange

@@ -68,6 +68,13 @@ extension NativeTextView {
         let checkboxText = nsText.substring(with: effectiveRange)
         guard checkboxText.range(of: #"\[[ xX]\]"#, options: .regularExpression) != nil else { return nil }
 
+        if let coordinator = delegate as? NativeTextViewCoordinator,
+           coordinator.handleTaskCheckboxActivation(displayRange: effectiveRange, isChecked: hitIsChecked, in: self) {
+            // A host action never enters native text editing or its undo stack.
+            // consumeTaskCheckboxIfHit still reports the classified interaction.
+            return true
+        }
+
         _ = applyTaskCheckboxState(!hitIsChecked, in: effectiveRange)
         return true
     }

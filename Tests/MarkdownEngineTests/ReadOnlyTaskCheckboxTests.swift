@@ -152,11 +152,13 @@ struct ReadOnlyTaskCheckboxTests {
         #expect(fixture.textView.isEditable == false)
     }
 
-    private func makeFixture(
+    func makeFixture(
         _ source: String,
         checkboxRange: NSRange,
         allowsReadOnlyToggle: Bool,
-        onTextMutation: ((MarkdownTextMutation) -> Void)? = nil
+        onTextMutation: ((MarkdownTextMutation) -> Void)? = nil,
+        isEditable: Bool = false,
+        onTaskCheckboxActivation: ((MarkdownTaskCheckboxActivation) -> Bool)? = nil
     ) throws -> (
         textView: NativeTextView,
         click: NSEvent,
@@ -175,6 +177,7 @@ struct ReadOnlyTaskCheckboxTests {
             onInlineSelectionChange: nil
         )
         coordinator.onTextMutation = onTextMutation
+        coordinator.onTaskCheckboxActivation = onTaskCheckboxActivation
         let textView = NativeTextView(frame: NSRect(x: 0, y: 0, width: 400, height: 200))
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 200),
@@ -187,7 +190,7 @@ struct ReadOnlyTaskCheckboxTests {
         textView.baseFont = .systemFont(ofSize: 14)
         textView.font = textView.baseFont
         textView.textContainerInset = NSSize(width: 40, height: 20)
-        textView.isEditable = false
+        textView.isEditable = isEditable
         textView.isSelectable = true
         textView.allowsUndo = true
         textView.allowsTaskCheckboxInteractionWhenReadOnly = allowsReadOnlyToggle

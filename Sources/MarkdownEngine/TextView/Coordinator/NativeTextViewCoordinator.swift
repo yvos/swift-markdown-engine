@@ -79,10 +79,10 @@ public final class NativeTextViewCoordinator: NSObject, NSTextViewDelegate {
     var layoutBridge: LayoutBridge?
     var layoutDelegate: MarkdownLayoutManagerDelegate?
     var onLinkActivation: ((MarkdownLinkActivation) -> Bool)?
+    var onTaskCheckboxActivation: ((MarkdownTaskCheckboxActivation) -> Bool)?
     var onLinkClick: ((String) -> Void)?
     var onCaretRectChange: ((CGRect) -> Void)?
     var onTextMutation: ((MarkdownTextMutation) -> Void)?
-    var onPrepareTextMutation: ((MarkdownSourceTextMutation) -> MarkdownDocumentTransaction?)?
     /// Embedder hook to build the right-click menu (the engine ships none). Gets the
     /// default menu + current selection range, returns the menu to show.
     var onBuildContextMenu: ((NSMenu, NSRange) -> NSMenu)?
@@ -90,9 +90,7 @@ public final class NativeTextViewCoordinator: NSObject, NSTextViewDelegate {
     var sourceRevision = 0
     var currentSourceRevision: (() -> Int)?
     var onSourceSelectionChange: ((MarkdownSourceSelection) -> Void)?
-    var onHistoryContextRestore: ((String, Data?) -> Void)?
     var onDocumentTransactionResult: ((MarkdownDocumentTransactionResult) -> Void)?
-    var documentUndoManager: UndoManager?
     weak var observedUndoManager: UndoManager?
     var onInlinePreviewKey: ((InlinePreviewKey) -> Bool)?
     var onUnhandledCommand: ((MarkdownEditorCommand) -> Bool)?
