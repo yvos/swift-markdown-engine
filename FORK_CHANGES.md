@@ -80,7 +80,7 @@ upstream. Existing PRs may stay open independently of fork releases. When
 upstream supplies equivalent behavior, reconcile the implementation in a new
 commit and retain the relevant regression tests; do not rewrite release history.
 
-## A2 API cleanup (unreleased)
+## A2 / 0.13.0-nofray.5 candidate
 
 The NoFray P3 consumer uses edit-session boundaries and remounts the document
 after external source replacement. It has no callers of the prepared mutation
@@ -90,7 +90,11 @@ Remove `onPrepareTextMutation`, `applyPreparedTextMutation`,
 context fields/callbacks. Ordinary source transactions retain revision checks and
 native text undo/redo; they no longer require invented host metadata. Native
 typing and transaction undo/redo regressions remain. This is an intentional
-fork API removal; the next release requires the NoFray compatibility build.
+fork API removal. [PR #10](https://github.com/yvos/swift-markdown-engine/pull/10)
+keeps cleanup and checkbox behavior in separate commits. CI run `36435078839`
+built successfully and passed 576 tests in 83 suites on `5699b60`, including
+native typing/transaction undo and checkbox source-range regressions. The NoFray
+compatibility build is still required before merge/tag; no release is claimed.
 
 ## Release provenance
 
