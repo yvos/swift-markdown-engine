@@ -7,6 +7,18 @@ All notable changes to swift-markdown-engine are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0-nofray.1] - 2026-10-08
+
+### Changed
+- Merge upstream `0.14.0` (`5ed9dd8d7eea0c77e93a91462836f4a3ef52424c`),
+  preserving the fork's editor, source-range, link, checkbox and text-undo contracts.
+- Directive autocomplete gets first refusal before the host command fallback.
+
+### Fixed
+- Consume focus requests only when they change and report blur during removal
+  or window closure, with deferred and coalesced binding writes (PR #175).
+- Retain host-first checkbox activation when upstream list helpers are disabled.
+
 ## [0.13.0-nofray.5] - 2026-09-28
 
 ### Added

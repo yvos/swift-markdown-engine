@@ -80,6 +80,29 @@ struct TaskCheckboxActivationTests {
         #expect(fixture.published() == source)
     }
 
+    @Test(arguments: [false, true])
+    func helpersOffKeepsHostActivationWithoutNativeMutation(editable: Bool) async throws {
+        let source = "- [ ] Item\n"
+        var activations: [MarkdownTaskCheckboxActivation] = []
+        let fixture = try ReadOnlyTaskCheckboxTests().makeFixture(source,
+            checkboxRange: NSRange(location: 2, length: 3), allowsReadOnlyToggle: false,
+            isEditable: editable, helpersEnabled: false,
+            onTaskCheckboxActivation: { activations.append($0); return true })
+        defer { fixture.window.orderOut(nil) }
+        let undo = try #require(fixture.coordinator.undoManager(for: fixture.textView))
+        undo.removeAllActions()
+
+        #expect(fixture.textView.toggleTaskCheckboxIfHit(event: fixture.click) == true)
+        await settleBinding()
+
+        #expect(activations == [.init(sourceRange: NSRange(location: 2, length: 3),
+            lineRange: NSRange(location: 0, length: (source as NSString).length),
+            isChecked: false, isEditable: editable)])
+        #expect(fixture.textView.string == source)
+        #expect(fixture.published() == source)
+        #expect(!undo.canUndo)
+    }
+
     private func settleBinding() async {
         for _ in 0..<4 {
             await withCheckedContinuation { continuation in
