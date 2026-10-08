@@ -119,7 +119,34 @@ Upstream submissions remain independent of fork releases. The six open topic
 PRs are updated against upstream `main`, including its post-release table-paste
 fix; that fix is not part of this exact `0.14.0` release baseline.
 
+### Upstream PR refresh on 2026-10-08
+
+Each topic was merged with upstream `main` at
+`7c626334d2e87146b0c34e340af3b9bb37a3ba81` without rewriting published history.
+All six PRs are mergeable, descriptions and maintainer updates carry current
+validation, and upstream CI approval/review remain with its maintainers.
+
+| PR | Published head | Full serial SwiftPM tests (core + LaTeX) |
+| --- | --- | --- |
+| #175 focus | `7537a8286dfeef49b1ebc4be846def95cc890b86` | 597 + 1 |
+| #176 commands | `a45055ffff97c6d36475ac7e624dfa6cede490cc` | 598 + 1 |
+| #177 formatting | `e6021f336b1072d485d2398a6de1e24a96ecf14f` | 596 + 1 |
+| #178 read-only checkbox | `ec4999f038ad8ef1121f99c5ac40a750f66da1a0` | 589 + 1 |
+| #191 caret | `45e869a5b5de2fb3fe3d00935d29e52f96b37f12` | 585 + 1 |
+| #192 links | `b304ae43bdccc8639d75e9f3a6415fa00fbbe39b` | 594 + 1 |
+
 ## Release provenance
+
+- `0.14.0-nofray.1` ([PR #11](https://github.com/yvos/swift-markdown-engine/pull/11),
+  [GitHub pre-release](https://github.com/yvos/swift-markdown-engine/releases/tag/0.14.0-nofray.1)):
+  ordinary upstream `0.14.0` import, directive/host command reconciliation,
+  reviewed focus lifecycle fix and helpers-off host checkbox regression.
+  Annotated immutable tag dereferences to
+  `3be768f2c7a8af8135c560ac0062a8591b0ac235`;
+  upstream baseline `5ed9dd8d7eea0c77e93a91462836f4a3ef52424c`.
+  Final PR-head [CI](https://github.com/yvos/swift-markdown-engine/actions/runs/37738735918)
+  and release-merge [CI](https://github.com/yvos/swift-markdown-engine/actions/runs/37739020394)
+  passed. Local `swift test`: 656 core tests in 87 suites and one LaTeX test.
 
 - `0.13.0-nofray.5` ([PR #10](https://github.com/yvos/swift-markdown-engine/pull/10),
   [GitHub pre-release](https://github.com/yvos/swift-markdown-engine/releases/tag/0.13.0-nofray.5)):
@@ -184,8 +211,21 @@ and remains preserved. All `nofray/*` topic branches remain.
 On 2026-10-08, the `0.14.0-nofray.1` candidate passed full `swift test`
 with 656 core tests in 87 suites and one LaTeX test, including directive
 command precedence, reviewed focus lifecycle, source transactions and
-helpers-off host checkbox activation. NoFray exact remote-pin verification
-and native checks are recorded with the release after publication.
+helpers-off host checkbox activation. NoFray exact remote-pin preflight passed (`20261008-084428-preflight-6kzqhkss`).
+Wrapper run `20261008-084528-test-eyk5f5bt` passed 33 tests, zero failures or
+skips, across adapter, native history, checkbox, atomicity and license suites.
+The resolved remote checkout was `3be768f2c7a8af8135c560ac0062a8591b0ac235`;
+no local package override was used. The native UI run
+`20261008-084903-test-3gke10_o` passed canonical checkbox complete/reopen and
+host-decided link navigation. Its Dutch capture test failed before mounting the
+editor because a fixed three-Tab sequence no longer activated the start button.
+The test now targets that identified button and still types without clicking the
+editor. Focus, canonical persistence and reopen passed in the focused rerun
+`20261008-085416-test-hr3uqwv8` (1 test, zero failures or skips).
+NoFray's pin/provenance and this isolated test correction are published in
+separate commits; consumer main is `61947542c`.
+Manual Computer Use was not accepted: QA launch failed and the CUA server timed
+out. Automated native UI evidence is reported separately from manual acceptance.
 
 On 2026-09-25, `swift test` passed 564 core tests in 79 suites and one LaTeX
 integration test in the combined fork. Candidate `0.13.0-nofray.3` validation
