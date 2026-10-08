@@ -81,9 +81,13 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
     public var currentSourceRevision: (() -> Int)?
     /// When `false` the editor renders read-only with no caret.
     public var isEditable: Bool
-    /// Optional two-way focus state. Set the binding to `true` to request first
-    /// responder status; user-driven focus and blur are written back. When no
-    /// binding is supplied, focus behavior remains entirely AppKit-managed.
+    /// Optional two-way focus state. Changes to the binding request or release
+    /// first responder status; an initial request waits for window attachment.
+    /// Repeated values (including `.constant(true)`) do not reclaim focus.
+    /// Focus and blur are written back asynchronously on the main queue, including
+    /// removal and window closure. Focus means first responder in this editor's
+    /// own window, not key-window or active-app status.
+    /// Without a binding, focus remains entirely AppKit-managed.
     public var isFocused: Binding<Bool>?
     /// Allows task checkboxes to remain interactive while ordinary text editing
     /// is disabled. Defaults to `false`, preserving fully read-only behavior.
@@ -140,6 +144,14 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
     /// command. Return `true` when the host consumed it; `false` preserves the
     /// normal AppKit fallback. Inline previews and list editing take priority.
     public var onUnhandledCommand: ((MarkdownEditorCommand) -> Bool)?
+    /// Fires when the caret's directive-completion context changes — entering
+    /// a directive name or one of its arguments — and with `nil` to dismiss.
+    /// The engine supplies the ranked candidates; the embedder draws the list
+    /// and routes keys back through ``onInlinePreviewKey``.
+    public var onDirectiveCompletion: ((DirectiveCompletionContext?) -> Void)?
+    /// Commit a picked directive completion. The engine applies it, places the
+    /// caret, and clears the binding.
+    @Binding public var pendingDirectiveCompletion: DirectiveCompletionRequest?
     /// Fires when the set of visible code blocks changes, so embedders can
     /// overlay copy buttons (see ``CodeBlockButton``).
     public var onCodeBlockSelectionChange: (([CodeBlockSelection]) -> Void)?
@@ -212,6 +224,8 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         onBuildContextMenu: ((NSMenu, NSRange) -> NSMenu)? = nil,
         onInlineSelectionChange: ((InlineSelectionState?) -> Void)? = nil,
         onInlinePreviewKey: ((InlinePreviewKey) -> Bool)? = nil,
+        onDirectiveCompletion: ((DirectiveCompletionContext?) -> Void)? = nil,
+        pendingDirectiveCompletion: Binding<DirectiveCompletionRequest?> = .constant(nil),
         onUnhandledCommand: ((MarkdownEditorCommand) -> Bool)? = nil,
         onCodeBlockSelectionChange: (([CodeBlockSelection]) -> Void)? = nil,
         onSpellCheckingPolicyChanged: ((SpellCheckingPolicy) -> Void)? = nil,
@@ -251,6 +265,8 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         self.onInlineSelectionChange = onInlineSelectionChange
         self.onInlinePreviewKey = onInlinePreviewKey
         self.onUnhandledCommand = onUnhandledCommand
+        self.onDirectiveCompletion = onDirectiveCompletion
+        self._pendingDirectiveCompletion = pendingDirectiveCompletion
         self.onCodeBlockSelectionChange = onCodeBlockSelectionChange
         self.onSpellCheckingPolicyChanged = onSpellCheckingPolicyChanged
         self.placeholder = placeholder
@@ -355,7 +371,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         textView.isAutomaticSpellingCorrectionEnabled = configuration.spellChecking.automaticSpellingCorrection
         textView.isContinuousSpellCheckingEnabled = configuration.spellChecking.continuousSpellChecking
         textView.isGrammarCheckingEnabled = configuration.spellChecking.grammarChecking
-        textView.isAutomaticQuoteSubstitutionEnabled = true
+        textView.isAutomaticQuoteSubstitutionEnabled = configuration.spellChecking.automaticQuoteSubstitution
         textView.isAutomaticDataDetectionEnabled = true
         textView.isAutomaticDashSubstitutionEnabled = false
         textView.onPasteImage = onPasteImage
@@ -407,6 +423,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         context.coordinator.onInlineSelectionChange = onInlineSelectionChange
         context.coordinator.onInlinePreviewKey = onInlinePreviewKey
         context.coordinator.onUnhandledCommand = onUnhandledCommand
+        context.coordinator.onDirectiveCompletion = onDirectiveCompletion
         context.coordinator.onCodeBlockSelectionChange = onCodeBlockSelectionChange
         context.coordinator.isFocused = isFocused
         textView.onFocusChange = { [weak coordinator = context.coordinator] focused in
@@ -679,6 +696,18 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
             }
             return
         }
+        if let pendingDirectiveCompletion {
+            if pendingDirectiveCompletion.documentId == documentId,
+               context.coordinator.lastAppliedDirectiveCompletionID != pendingDirectiveCompletion.id {
+                context.coordinator.applyDirectiveCompletion(pendingDirectiveCompletion, to: textView)
+            }
+            DispatchQueue.main.async {
+                if self.pendingDirectiveCompletion?.id == pendingDirectiveCompletion.id {
+                    self.pendingDirectiveCompletion = nil
+                }
+            }
+            return
+        }
         if let pendingInlineReplacement {
             if pendingInlineReplacement.documentId == documentId,
                context.coordinator.lastAppliedInlineReplacementID != pendingInlineReplacement.id {
@@ -821,6 +850,7 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         context.coordinator.onDocumentTransactionResult = onDocumentTransactionResult
         context.coordinator.onInlinePreviewKey = onInlinePreviewKey
         context.coordinator.onUnhandledCommand = onUnhandledCommand
+        context.coordinator.onDirectiveCompletion = onDirectiveCompletion
         context.coordinator.onCodeBlockSelectionChange = onCodeBlockSelectionChange
         context.coordinator.didInitialFormatting = true
     }
@@ -852,9 +882,11 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         coordinator.lastWikiFingerprint = configuration.services.wikiLinks.fingerprint()
         coordinator.onCodeBlockSelectionChange = onCodeBlockSelectionChange
         coordinator.onInlinePreviewKey = onInlinePreviewKey
+        coordinator.onDirectiveCompletion = onDirectiveCompletion
         coordinator.userPrefersContinuousSpellChecking = configuration.spellChecking.continuousSpellChecking
         coordinator.userPrefersGrammarChecking = configuration.spellChecking.grammarChecking
         coordinator.userPrefersAutomaticSpellingCorrection = configuration.spellChecking.automaticSpellingCorrection
+        coordinator.userPrefersAutomaticQuoteSubstitution = configuration.spellChecking.automaticQuoteSubstitution
         coordinator.onSpellCheckingPolicyChanged = onSpellCheckingPolicyChanged
         return coordinator
     }

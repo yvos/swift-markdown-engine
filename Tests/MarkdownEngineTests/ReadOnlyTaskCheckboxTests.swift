@@ -158,6 +158,7 @@ struct ReadOnlyTaskCheckboxTests {
         allowsReadOnlyToggle: Bool,
         onTextMutation: ((MarkdownTextMutation) -> Void)? = nil,
         isEditable: Bool = false,
+        helpersEnabled: Bool = true,
         onTaskCheckboxActivation: ((MarkdownTaskCheckboxActivation) -> Bool)? = nil
     ) throws -> (
         textView: NativeTextView,
@@ -176,6 +177,7 @@ struct ReadOnlyTaskCheckboxTests {
             onLinkClick: nil,
             onInlineSelectionChange: nil
         )
+        coordinator.configuration.lists.helpersEnabled = helpersEnabled
         coordinator.onTextMutation = onTextMutation
         coordinator.onTaskCheckboxActivation = onTaskCheckboxActivation
         let textView = NativeTextView(frame: NSRect(x: 0, y: 0, width: 400, height: 200))
@@ -187,6 +189,7 @@ struct ReadOnlyTaskCheckboxTests {
         )
         window.contentView = textView
         textView.frame = window.contentView?.bounds ?? .zero
+        textView.configuration = coordinator.configuration
         textView.baseFont = .systemFont(ofSize: 14)
         textView.font = textView.baseFont
         textView.textContainerInset = NSSize(width: 40, height: 20)

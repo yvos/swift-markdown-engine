@@ -7,6 +7,18 @@ All notable changes to swift-markdown-engine are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0-nofray.1] - 2026-10-08
+
+### Changed
+- Merge upstream `0.14.0` (`5ed9dd8d7eea0c77e93a91462836f4a3ef52424c`),
+  preserving the fork's editor, source-range, link, checkbox and text-undo contracts.
+- Directive autocomplete gets first refusal before the host command fallback.
+
+### Fixed
+- Consume focus requests only when they change and report blur during removal
+  or window closure, with deferred and coalesced binding writes (PR #175).
+- Retain host-first checkbox activation when upstream list helpers are disabled.
+
 ## [0.13.0-nofray.5] - 2026-09-28
 
 ### Added
@@ -56,7 +68,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-04
+
+### Added
+- `SpellCheckingPolicy.automaticQuoteSubstitution` (default `true`, unchanged behavior) lets embedders editing raw Markdown/LaTeX source keep straight `'` and `"`; smart quotes were forced on at creation and re-enabled on every caret move out of a code/LaTeX/link span. The Smart Quotes menu toggle is now captured like the spelling toggles.
+- **Directive glyph presentation**: a self-contained call (`@marker`,
+  `@glyph(star.fill)`) collapses its source behind an SF Symbol, replacement
+  text, or an image supplied by the directive's `presentation`, and reveals the
+  real characters again under the caret. The source is never removed from the
+  storage — it collapses to zero width the same way inline LaTeX does — so
+  selection, find, copy, and undo still see it. `Demo/` gains `@icon`, `@flag`,
+  `@emoji`, and `@pagebreak` as embedder-side directives — anything carrying
+  curated data or document policy is an app concern, not an engine primitive.
+- **Directive autocomplete** for both directive names and argument values,
+  riding the existing inline-preview seam (`onDirectiveCompletion`,
+  `pendingDirectiveCompletion`); the engine detects the trigger, ranks the
+  candidates from the registry and from the directive's own
+  `valueCompletions`, routes ↑/↓/↵/Esc, and ships no picker UI. The default
+  `valueCompletions` already answers anything the declared schema can — closed
+  keyword sets and booleans — so a directive implements it only when its domain
+  is dynamic or too large to declare.
+
 ### Fixed
+- Nested lists keep their levels both ways: copied out as nested HTML/RTF
+  instead of one flat list, and read back from WebKit's sibling-sublist shape
+  (Mail, Notes) instead of dropping its items. Task boxes render with the list
+  helpers turned off.
+- A trackpad held against the top or bottom of the editor no longer flickers.
+  AppKit applies a scroll on the next display refresh, after `scrollWheel(with:)`
+  has returned, so the clamp there only ever corrected the PREVIOUS event — with
+  the rubber band allowed, every refresh committed a fresh overshoot (12–24pt)
+  and every event pulled it back. `ClampedScrollView` now disables vertical
+  elasticity; the document view is already sized to the real content height, so
+  AppKit stops exactly at the edge and the clamp is a backstop again.
 - A programmatic content swap — a document switch, or the SwiftUI `text` binding
   changing from outside the editor — left the code-block selection pass reading
   the PREVIOUS document's ranges: only the typing and caret paths refreshed that

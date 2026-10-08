@@ -94,6 +94,14 @@ public final class NativeTextViewCoordinator: NSObject, NSTextViewDelegate {
     weak var observedUndoManager: UndoManager?
     var onInlinePreviewKey: ((InlinePreviewKey) -> Bool)?
     var onUnhandledCommand: ((MarkdownEditorCommand) -> Bool)?
+    /// Directive autocomplete: published whenever the caret's completion
+    /// context changes, `nil` to dismiss. Detection and commit live in
+    /// `NativeTextViewCoordinator+Directives.swift`.
+    var onDirectiveCompletion: ((DirectiveCompletionContext?) -> Void)?
+    /// True while a completion context is published — the signal
+    /// `doCommandBy` uses to route ↑/↓/↵/Esc to the embedder's picker.
+    var isDirectiveCompletionActive: Bool = false
+    var lastAppliedDirectiveCompletionID: UUID?
     var onCodeBlockSelectionChange: (([CodeBlockSelection]) -> Void)?
     var didInitialFormatting: Bool = false
     /// One-shot guard so `updateCodeBlockSelection` only forces a full-document layout once per document.
@@ -186,12 +194,19 @@ public final class NativeTextViewCoordinator: NSObject, NSTextViewDelegate {
     /// nil = no span, use the theme.
     var resolvedCaretColor: NSColor?
 
-    /// Mirrors an actual AppKit first-responder transition into the optional
-    /// host binding. Equality guards keep host-driven reconciliation from
-    /// feeding the same value back into SwiftUI.
+    private var focusReportGeneration = 0
+
+    /// Defer binding writes out of SwiftUI view updates, retaining the binding
+    /// through teardown. A newer responder transition supersedes a queued one.
     func reportFocusChange(_ focused: Bool) {
-        guard let isFocused, isFocused.wrappedValue != focused else { return }
-        isFocused.wrappedValue = focused
+        focusReportGeneration &+= 1
+        let generation = focusReportGeneration
+        guard let isFocused else { return }
+        DispatchQueue.main.async { [self] in
+            guard focusReportGeneration == generation,
+                  isFocused.wrappedValue != focused else { return }
+            isFocused.wrappedValue = focused
+        }
     }
 
     var cachedCodeBlockTokens: [(index: Int, token: MarkdownToken)] = []
@@ -217,6 +232,7 @@ public final class NativeTextViewCoordinator: NSObject, NSTextViewDelegate {
     var userPrefersContinuousSpellChecking: Bool = true
     var userPrefersGrammarChecking: Bool = true
     var userPrefersAutomaticSpellingCorrection: Bool = true
+    var userPrefersAutomaticQuoteSubstitution: Bool = true
 
     /// Fires after the user toggles a spell/grammar/auto-correction menu item.
     /// Embedders persist the returned policy (e.g. to `UserDefaults`) and feed
@@ -227,7 +243,8 @@ public final class NativeTextViewCoordinator: NSObject, NSTextViewDelegate {
         SpellCheckingPolicy(
             continuousSpellChecking: userPrefersContinuousSpellChecking,
             grammarChecking: userPrefersGrammarChecking,
-            automaticSpellingCorrection: userPrefersAutomaticSpellingCorrection
+            automaticSpellingCorrection: userPrefersAutomaticSpellingCorrection,
+            automaticQuoteSubstitution: userPrefersAutomaticQuoteSubstitution
         )
     }
 
@@ -239,6 +256,7 @@ public final class NativeTextViewCoordinator: NSObject, NSTextViewDelegate {
         userPrefersContinuousSpellChecking = textView.isContinuousSpellCheckingEnabled
         userPrefersGrammarChecking = textView.isGrammarCheckingEnabled
         userPrefersAutomaticSpellingCorrection = textView.isAutomaticSpellingCorrectionEnabled
+        userPrefersAutomaticQuoteSubstitution = textView.isAutomaticQuoteSubstitutionEnabled
         // Invalidate the "didn't change" short-circuit so the next selection
         // update re-applies the preferences cleanly.
         cachedSpellingDisabled = nil

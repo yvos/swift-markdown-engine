@@ -2,9 +2,8 @@
 
 This is the maintained NoFray fork of
 [`nodes-app/swift-markdown-engine`](https://github.com/nodes-app/swift-markdown-engine).
-The integrated upstream baseline is `00b5e471277ac90c70cf82a31b425dd29ea96663`:
-upstream `0.13.0` (`d1421012aeece640e2c2e47e0e573a93cbe2a420`) plus its subsequent
-fixes through that baseline. NoFray releases do not depend on upstream accepting
+The integrated upstream baseline is upstream `0.14.0` at
+`5ed9dd8d7eea0c77e93a91462836f4a3ef52424c`. NoFray releases do not depend on upstream accepting
 our pull requests.
 
 ## Branch and release policy
@@ -65,10 +64,10 @@ after confirming its changes are retained and its working tree is clean.
 
 | Behavior | Regression coverage | Upstream status |
 | --- | --- | --- |
-| Optional two-way focus binding | `FocusBindingTests` | [PR #175](https://github.com/nodes-app/swift-markdown-engine/pull/175), open as of 2026-09-25 |
-| Host fallback for declined Escape, Tab and Shift-Tab | `UnhandledCommandTests` | [PR #176](https://github.com/nodes-app/swift-markdown-engine/pull/176), open as of 2026-09-25 |
-| Paragraph and task-list formatting | `BlockFormattingActionTests` | [PR #177](https://github.com/nodes-app/swift-markdown-engine/pull/177), open as of 2026-09-25 |
-| Opt-in task-checkbox toggles in read-only editors | `ReadOnlyTaskCheckboxTests` | [PR #178](https://github.com/nodes-app/swift-markdown-engine/pull/178), open as of 2026-09-25 |
+| Optional two-way focus binding | `FocusBindingTests` | [PR #175](https://github.com/nodes-app/swift-markdown-engine/pull/175), open as of 2026-10-08 |
+| Host fallback for declined Escape, Tab and Shift-Tab | `UnhandledCommandTests` | [PR #176](https://github.com/nodes-app/swift-markdown-engine/pull/176), open as of 2026-10-08 |
+| Paragraph and task-list formatting | `BlockFormattingActionTests` | [PR #177](https://github.com/nodes-app/swift-markdown-engine/pull/177), open as of 2026-10-08 |
+| Opt-in task-checkbox toggles in read-only editors | `ReadOnlyTaskCheckboxTests` | [PR #178](https://github.com/nodes-app/swift-markdown-engine/pull/178), open as of 2026-10-08 |
 | Native pointer classification and exact source hit ranges | `PointerInteractionTests`, `MarkdownSourceRangeTests` | Maintained fork extension |
 | Host-decided link activation (`MarkdownLinkActivation`, `onLinkActivation`), preserving destination spaces and detecting autolinks only in the clicked paragraph | `MarkdownASTStylerTests`, `LinkActivationTests`, `LinkDestinationTests` (titles, whitespace, later-paragraph source ranges) | [PR #192](https://github.com/nodes-app/swift-markdown-engine/pull/192); review fixes released in `0.13.0-nofray.4` |
 | Host-decided checkbox activation, including read-only views, without native text/undo mutation when handled | `TaskCheckboxActivationTests`, `ReadOnlyTaskCheckboxTests` | A2, generic upstream candidate |
@@ -80,7 +79,7 @@ upstream. Existing PRs may stay open independently of fork releases. When
 upstream supplies equivalent behavior, reconcile the implementation in a new
 commit and retain the relevant regression tests; do not rewrite release history.
 
-## A2 / 0.13.0-nofray.5 candidate
+## A2 / 0.13.0-nofray.5
 
 The NoFray P3 consumer uses edit-session boundaries and remounts the document
 after external source replacement. It has no callers of the prepared mutation
@@ -99,9 +98,34 @@ built successfully in its disposable `meeting-checkbox-compat` worktree at
 `fcd768a8`, using the remote revision `00b58b2`: wrapper preflight
 `20260928-170059-preflight-2za_zxkw` and Debug build
 `20260928-181219-build-q43a14qk` (38.92 seconds). This proves compilation; NoFray
-adapter/history tests follow the immutable release pin. Merge/tag still pending.
+adapter/history tests follow the immutable release pin. The candidate was merged and released as `0.13.0-nofray.5` at
+`029b044404f5d5bec3b901913b9c6e68c15083ca`.
+
+## 0.14.0 integration
+
+Upstream `0.14.0` is imported with ordinary merge ancestry. The four conflict
+files are the wrapper, coordinator, key-command delegate and demo. Keep both
+upstream directive completion and the existing host command fallback; pending
+source transactions keep their revision-checked route ahead of other requests.
+The host's link/checkbox callbacks and source ranges remain intact. Upstream's
+helpers-off checkbox styling must still dispatch host activation without native
+text or undo mutation; `TaskCheckboxActivationTests` covers editable/read-only
+views. PR #175's reviewed focus fix (`5413184`) is retained with its tests.
+`UnhandledCommandTests` covers directive consumption and declined-picker fallback.
+These files already centralize wrapper/delegate plumbing; this merge adds no
+new responsibility that warrants splitting them during the upstream import.
+
+Upstream submissions remain independent of fork releases. The six open topic
+PRs are updated against upstream `main`, including its post-release table-paste
+fix; that fix is not part of this exact `0.14.0` release baseline.
 
 ## Release provenance
+
+- `0.13.0-nofray.5` ([PR #10](https://github.com/yvos/swift-markdown-engine/pull/10),
+  [GitHub pre-release](https://github.com/yvos/swift-markdown-engine/releases/tag/0.13.0-nofray.5)):
+  host-first checkbox activation and removal of unused shared host-history APIs.
+  Release commit `029b044404f5d5bec3b901913b9c6e68c15083ca`;
+  upstream baseline `00b5e471277ac90c70cf82a31b425dd29ea96663`.
 
 - `0.13.0-nofray.4` ([PR #9](https://github.com/yvos/swift-markdown-engine/pull/9),
   [GitHub pre-release](https://github.com/yvos/swift-markdown-engine/releases/tag/0.13.0-nofray.4)):
@@ -156,6 +180,12 @@ recovery snapshot `codex/meeting-review-annotations` (`f9e9c2c`) is not merged
 and remains preserved. All `nofray/*` topic branches remain.
 
 ## Validation and attribution
+
+On 2026-10-08, the `0.14.0-nofray.1` candidate passed full `swift test`
+with 656 core tests in 87 suites and one LaTeX test, including directive
+command precedence, reviewed focus lifecycle, source transactions and
+helpers-off host checkbox activation. NoFray exact remote-pin verification
+and native checks are recorded with the release after publication.
 
 On 2026-09-25, `swift test` passed 564 core tests in 79 suites and one LaTeX
 integration test in the combined fork. Candidate `0.13.0-nofray.3` validation
