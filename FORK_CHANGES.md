@@ -181,6 +181,12 @@ and remains preserved. All `nofray/*` topic branches remain.
 
 ## Validation and attribution
 
+On 2026-10-08, the `0.14.0-nofray.1` candidate passed full `swift test`
+with 656 core tests in 87 suites and one LaTeX test, including directive
+command precedence, reviewed focus lifecycle, source transactions and
+helpers-off host checkbox activation. NoFray exact remote-pin verification
+and native checks are recorded with the release after publication.
+
 On 2026-09-25, `swift test` passed 564 core tests in 79 suites and one LaTeX
 integration test in the combined fork. Candidate `0.13.0-nofray.3` validation
 on 2026-09-27 passed `swift test` with 569 core tests in 80 suites and one

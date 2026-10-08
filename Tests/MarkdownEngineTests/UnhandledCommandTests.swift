@@ -12,10 +12,11 @@ import Testing
 @MainActor
 @Suite("Unhandled editor commands")
 struct UnhandledCommandTests {
-    @Test("Preview consumption wins over the host callback")
-    func previewWins() {
+    @Test("Inline or directive preview consumption wins over the host callback", arguments: [false, true])
+    func previewWins(directive: Bool) {
         let (coordinator, textView) = makeEditor("[[link]]")
-        coordinator.isImageEmbedActive = true
+        coordinator.isImageEmbedActive = !directive
+        coordinator.isDirectiveCompletionActive = directive
         var previewCalls = 0
         var hostCalls = 0
         coordinator.onInlinePreviewKey = { key in
@@ -31,10 +32,11 @@ struct UnhandledCommandTests {
         #expect(hostCalls == 0)
     }
 
-    @Test("A declined preview offers Escape to the host exactly once")
-    func declinedPreviewFallsBackOnce() {
+    @Test("A declined inline or directive preview offers Escape to the host exactly once", arguments: [false, true])
+    func declinedPreviewFallsBackOnce(directive: Bool) {
         let (coordinator, textView) = makeEditor("[[link]]")
-        coordinator.isImageEmbedActive = true
+        coordinator.isImageEmbedActive = !directive
+        coordinator.isDirectiveCompletionActive = directive
         var received: [MarkdownEditorCommand] = []
         coordinator.onInlinePreviewKey = { _ in false }
         coordinator.onUnhandledCommand = { received.append($0); return true }
