@@ -6,6 +6,20 @@ The integrated upstream baseline is upstream `0.14.0` at
 `5ed9dd8d7eea0c77e93a91462836f4a3ef52424c`. NoFray releases do not depend on upstream accepting
 our pull requests.
 
+## 0.14.0 audit repairs
+
+The existing upstream `0.14.0` baseline is unchanged. Two generic fixes retain
+pasted Markdown whitespace/private pasteboard content and escaped brackets in
+inline-link labels. There is no public API or schema change. Parser and native
+paste regressions cover escape parity, unterminated labels, paragraphs, hard
+breaks, indentation, private-flavor priority, UTF-16 replacement and undo/redo.
+Link activation also retains source coordinates after emoji and wiki projection.
+The link repair is offered in upstream [PR #192](https://github.com/nodes-app/swift-markdown-engine/pull/192),
+head `f1d50c2ab7f6eaf2d564c297e9ec3b2a1afce03e`; paste is offered independently in [PR #197](https://github.com/nodes-app/swift-markdown-engine/pull/197),
+head `8dc8f1f4e02e81123eff314932f2e407c319c30d`.
+Native NoFray preview already exercises task/project/contact/meeting paste and
+historical transcript links. Exact remote consumer qualification follows publication.
+
 ## Branch and release policy
 
 - `origin/main` is the single integration and release branch for upstream code
@@ -70,9 +84,11 @@ after confirming its changes are retained and its working tree is clean.
 | Opt-in task-checkbox toggles in read-only editors | `ReadOnlyTaskCheckboxTests` | [PR #178](https://github.com/nodes-app/swift-markdown-engine/pull/178), open as of 2026-10-08 |
 | Native pointer classification and exact source hit ranges | `PointerInteractionTests`, `MarkdownSourceRangeTests` | Maintained fork extension |
 | Host-decided link activation (`MarkdownLinkActivation`, `onLinkActivation`), preserving destination spaces and detecting autolinks only in the clicked paragraph | `MarkdownASTStylerTests`, `LinkActivationTests`, `LinkDestinationTests` (titles, whitespace, later-paragraph source ranges) | [PR #192](https://github.com/nodes-app/swift-markdown-engine/pull/192); review fixes released in `0.13.0-nofray.4` |
+| Escaped brackets in inline-link labels, with exact source coordinates through activation | `InlineParserTests`, `LinkActivationTests` | [PR #192](https://github.com/nodes-app/swift-markdown-engine/pull/192), generic repair |
 | Host-decided checkbox activation, including read-only views, without native text/undo mutation when handled | `TaskCheckboxActivationTests`, `ReadOnlyTaskCheckboxTests` | A2, generic upstream candidate |
 | Source transactions with document-local text undo | `MarkdownDocumentTransactionTests`, `NativeTypingHistoryTests` | Maintained fork extension |
 | Caret visibility during keyboard navigation in internally scrolling editors | `CaretVisibilityTests` | Maintained fork fix |
+| Preserve pasted Markdown paragraph boundaries, code indentation, hard breaks and raw private flavor | `NativePasteWhitespaceTests`, `BlockquotePasteTests`, `PasteStructureGuardTests`, `MarkdownPasteboardWriterTests` | [PR #197](https://github.com/nodes-app/swift-markdown-engine/pull/197); exact consumer qualification follows publication |
 
 Keep upstream submissions narrowly scoped on separate topic branches based on
 upstream. Existing PRs may stay open independently of fork releases. When
@@ -136,6 +152,15 @@ validation, and upstream CI approval/review remain with its maintainers.
 | #192 links | `b304ae43bdccc8639d75e9f3a6415fa00fbbe39b` | 594 + 1 |
 
 ## Release provenance
+
+- `0.14.0-nofray.2` ([GitHub pre-release](https://github.com/yvos/swift-markdown-engine/releases/tag/0.14.0-nofray.2)):
+  generic Markdown paste-whitespace/private-flavor and escaped-link-label repairs.
+  Upstream submissions are PR #197 (paste) and PR #192 (links); the existing
+  upstream baseline remains `5ed9dd8d7eea0c77e93a91462836f4a3ef52424c`.
+  Local serialized `swift test`: 664 core tests in 88 suites plus one LaTeX test.
+  There are no new public APIs, dependencies or schema versions. Native NoFray
+  preview checks and 4000 unchanged parser-reference trees are retained locally;
+  exact remote consumer qualification follows the immutable tag publication.
 
 - `0.14.0-nofray.1` ([PR #11](https://github.com/yvos/swift-markdown-engine/pull/11),
   [GitHub pre-release](https://github.com/yvos/swift-markdown-engine/releases/tag/0.14.0-nofray.1)):

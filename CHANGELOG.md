@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Directive autocomplete gets first refusal before the host command fallback.
 
 ### Fixed
+- Inline links retain escaped brackets in their labels, including their full destination and UTF-16 source range.
+- Pasting Markdown preserves paragraph boundaries, code indentation and hard-break whitespace; the private Markdown pasteboard flavor is inserted without lossy normalization.
 - Consume focus requests only when they change and report blur during removal
   or window closure, with deferred and coalesced binding writes (PR #175).
 - Retain host-first checkbox activation when upstream list helpers are disabled.
