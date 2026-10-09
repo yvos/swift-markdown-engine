@@ -155,6 +155,13 @@ validation, and upstream CI approval/review remain with its maintainers.
 
 - `0.14.0-nofray.2` ([GitHub pre-release](https://github.com/yvos/swift-markdown-engine/releases/tag/0.14.0-nofray.2)):
   generic Markdown paste-whitespace/private-flavor and escaped-link-label repairs.
+  [Fork PR #12](https://github.com/yvos/swift-markdown-engine/pull/12) merged at
+  `fb015d151a140a8e97ac8626b75d17cefc73fa11`, the annotated tag's exact target.
+  [Candidate CI](https://github.com/yvos/swift-markdown-engine/actions/runs/37886215098)
+  and [merge CI](https://github.com/yvos/swift-markdown-engine/actions/runs/37886411137)
+  pass with 665 tests. Merge CI's first attempt failed the existing 30 ms
+  fractional table-resize assertion; the retry, separate 22-test table suite,
+  and full local serial/parallel suites pass. Retain that qualification limit.
   Upstream submissions are PR #197 (paste) and PR #192 (links); the existing
   upstream baseline remains `5ed9dd8d7eea0c77e93a91462836f4a3ef52424c`.
   Local serialized `swift test`: 664 core tests in 88 suites plus one LaTeX test.
