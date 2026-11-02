@@ -41,7 +41,7 @@ Local serialized `swift test` on macOS 27.2: 693 core tests in 94 suites with on
 issue, plus 1 LaTeX and 7 code-block tests passing. The one issue is the existing
 `MarkdownHTMLRendererTests` bare-URL expectation (`www.example.com` now detects
 as `https://`); it fails identically on `821bfb3` on this OS and is unchanged by
-the merge. CI runs on macOS 15.
+the merge. Hosted CI did not run; see the `0.15.0-nofray.1` release provenance.
 
 ## 0.14.0 audit repairs
 
@@ -192,6 +192,22 @@ validation, and upstream CI approval/review remain with its maintainers.
 | #192 links | `b304ae43bdccc8639d75e9f3a6415fa00fbbe39b` | 594 + 1 |
 
 ## Release provenance
+
+- `0.15.0-nofray.1` ([GitHub pre-release](https://github.com/yvos/swift-markdown-engine/releases/tag/0.15.0-nofray.1)):
+  ordinary import of upstream `main` at `2e9f872ab2e1b094390b40a0f6b83278a4f53491`
+  (`0.15.0` plus post-release fixes). [Fork PR #13](https://github.com/yvos/swift-markdown-engine/pull/13)
+  merged at `73b6a7082b38d050cf0c5a91d19e705f0780dfac`, the annotated tag's exact
+  target and tree-identical to the tested PR head `6376b88`. Hosted CI
+  [run 41425684795](https://github.com/yvos/swift-markdown-engine/actions/runs/41425684795)
+  was cancelled on both attempts before any step ran: no GitHub-hosted macOS arm64
+  runner was acquired. The release is qualified by the full local serialized suite
+  recorded under the 0.15.0 integration and by NoFray: exact remote-pin preflight
+  `20261102-115355-preflight-dnjrw07d` resolved `73b6a70` without a local override,
+  and wrapper run `20261102-120046-test-kyi1vgeg` passed 41 tests (adapter,
+  checkbox, checkbox atomicity, link activation, native history and license
+  suites) with zero failures or skips. NoFray pin and provenance are published as
+  consumer main `016edc49d`; its resolution no longer contains HighlighterSwift.
+  No manual UI acceptance or Writing Tools interaction check is claimed.
 
 - `0.14.0-nofray.2` ([GitHub pre-release](https://github.com/yvos/swift-markdown-engine/releases/tag/0.14.0-nofray.2)):
   generic Markdown paste-whitespace/private-flavor and escaped-link-label repairs.
