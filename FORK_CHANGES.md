@@ -119,15 +119,15 @@ after confirming its changes are retained and its working tree is clean.
 | Behavior | Regression coverage | Upstream status |
 | --- | --- | --- |
 | Optional two-way focus binding | `FocusBindingTests` | Upstream since `0.15.0` ([PR #175](https://github.com/nodes-app/swift-markdown-engine/pull/175), `575bc3d`); no longer a fork extension |
-| Host fallback for declined Escape, Tab and Shift-Tab | `UnhandledCommandTests` | [PR #176](https://github.com/nodes-app/swift-markdown-engine/pull/176), open as of 2026-11-02; conflicts with upstream `main` (demo, hanging-caret command path) |
-| Paragraph and task-list formatting | `BlockFormattingActionTests` | [PR #177](https://github.com/nodes-app/swift-markdown-engine/pull/177), open as of 2026-11-02; merges cleanly with upstream `main` |
-| Opt-in task-checkbox toggles in read-only editors | `ReadOnlyTaskCheckboxTests` | [PR #178](https://github.com/nodes-app/swift-markdown-engine/pull/178), open as of 2026-11-02; conflicts with upstream `main` beside the merged focus properties |
+| Host fallback for declined Escape, Tab and Shift-Tab | `UnhandledCommandTests` | [PR #176](https://github.com/nodes-app/swift-markdown-engine/pull/176), open; refreshed onto upstream `main` on 2026-11-02 |
+| Paragraph and task-list formatting | `BlockFormattingActionTests` | [PR #177](https://github.com/nodes-app/swift-markdown-engine/pull/177), open; refreshed onto upstream `main` on 2026-11-02 |
+| Opt-in task-checkbox toggles in read-only editors | `ReadOnlyTaskCheckboxTests` | [PR #178](https://github.com/nodes-app/swift-markdown-engine/pull/178), open; refreshed onto upstream `main` on 2026-11-02 |
 | Native pointer classification and exact source hit ranges | `PointerInteractionTests`, `MarkdownSourceRangeTests` | Maintained fork extension |
 | Host-decided link activation (`MarkdownLinkActivation`, `onLinkActivation`), preserving destination spaces and detecting autolinks only in the clicked paragraph | `MarkdownASTStylerTests`, `LinkActivationTests`, `LinkDestinationTests` (titles, whitespace, later-paragraph source ranges) | [PR #192](https://github.com/nodes-app/swift-markdown-engine/pull/192); review fixes released in `0.13.0-nofray.4` |
 | Escaped brackets in inline-link labels, with exact source coordinates through activation | `InlineParserTests`, `LinkActivationTests` | [PR #192](https://github.com/nodes-app/swift-markdown-engine/pull/192), generic repair |
 | Host-decided checkbox activation, including read-only views, without native text/undo mutation when handled | `TaskCheckboxActivationTests`, `ReadOnlyTaskCheckboxTests` | A2, generic upstream candidate |
 | Source transactions with document-local text undo | `MarkdownDocumentTransactionTests`, `NativeTypingHistoryTests` | Maintained fork extension |
-| Caret visibility during keyboard navigation in internally scrolling editors | `CaretVisibilityTests` | [PR #191](https://github.com/nodes-app/swift-markdown-engine/pull/191), open as of 2026-11-02; upstream full-width reveal still uses the TextKit 1 path |
+| Caret visibility during keyboard navigation in internally scrolling editors | `CaretVisibilityTests` | [PR #191](https://github.com/nodes-app/swift-markdown-engine/pull/191), open, refreshed on 2026-11-02; upstream full-width reveal still uses the TextKit 1 path |
 | Preserve pasted Markdown paragraph boundaries, code indentation, hard breaks and raw private flavor | `NativePasteWhitespaceTests`, `BlockquotePasteTests`, `PasteStructureGuardTests`, `MarkdownPasteboardWriterTests` | [PR #197](https://github.com/nodes-app/swift-markdown-engine/pull/197); exact consumer qualification follows publication |
 
 Keep upstream submissions narrowly scoped on separate topic branches based on
@@ -174,6 +174,32 @@ new responsibility that warrants splitting them during the upstream import.
 Upstream submissions remain independent of fork releases. The six open topic
 PRs are updated against upstream `main`, including its post-release table-paste
 fix; that fix is not part of this exact `0.14.0` release baseline.
+
+### Upstream PR refresh on 2026-11-02
+
+Each open topic was merged with upstream `main` at
+`2e9f872ab2e1b094390b40a0f6b83278a4f53491` (`0.15.0` plus post-release fixes)
+without rewriting published history; PR #175 is merged upstream. All six PRs are
+mergeable. Changelog entries move to the new `[Unreleased]` section. #178 keeps
+upstream's `isFocused` beside the read-only option. #176 runs upstream's
+hanging-caret line move inside its non-raw path, before the host fallback; the
+`0.15.0-nofray.1` fork release also runs it in raw-source mode, which NoFray does
+not use. Reconcile that on the next fork update. #191 adds one comment commit for
+upstream's `rectInClipView` geometry. No PR comments were posted.
+
+Full serial `swift test --no-parallel` on macOS 27.2 per head: the counts below
+plus 1 LaTeX and 7 code-block tests. Each run has one issue, the
+`MarkdownHTMLRendererTests` bare-URL expectation, which fails identically on
+upstream `2e9f872` on this OS.
+
+| PR | Published head | Core tests |
+| --- | --- | --- |
+| #176 commands | `1ebc58f3fa6559de51c5257072fc466554f47975` | 638 in 83 suites |
+| #177 formatting | `4ff68fc45d720064e15519132d9e2bb876323773` | 636 in 83 suites |
+| #178 read-only checkbox | `d616a6ceee9e525e8f0d9c5deb830202a06c6c8d` | 629 in 83 suites |
+| #191 caret | `1da3953541a091914053716c98dee59cafd3e7e7` | 625 in 83 suites |
+| #192 links | `352a6eb33d16de2e475078da6ebf85e3c9ed70ec` | 637 in 85 suites |
+| #197 paste | `e618c4700e9e1aa3b9202fc284239aac86cb184b` | 628 in 83 suites |
 
 ### Upstream PR refresh on 2026-10-08
 
