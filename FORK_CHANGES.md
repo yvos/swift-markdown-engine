@@ -100,10 +100,13 @@ merge commit when merging an upstream-update PR; do not use squash/rebase merge.
 Never use `gh repo sync --force`, `reset --hard` or an automatic conflict strategy
 to make the fork match upstream.
 
-Before merging, check this ledger, update the baseline SHA and run `swift test`.
-When editor APIs or behavior change, also run the affected NoFray adapter and
-editor-history tests. CI runs package build/tests on this fork's PRs and `main`.
-A clean textual merge alone does not establish behavioral compatibility.
+Before merging, check this ledger, update the baseline SHA and run the full
+`swift test --no-parallel`, explaining any failure. When editor APIs or behavior
+change, also run the affected NoFray adapter and editor-history tests. Hosted CI
+runs the package build/tests on this fork's PRs and `main` as an extra signal, not
+a gate: a CI failure or unavailable runner does not block a merge or release, but
+record it, and investigate a real test failure. A clean textual merge alone does
+not establish behavioral compatibility.
 
 After merging, create a new unique release tag on the verified `main` commit,
 update NoFray's exact pin and provenance together, and verify package resolution
