@@ -212,7 +212,7 @@ extension NativeTextViewCoordinator {
         let editingDocumentID = documentId
         let expectedBinding = text
         DispatchQueue.main.async { [weak self] in
-            guard let self, self.documentId == editingDocumentID,
+            guard let self, self.bindingFollows(editingDocumentID),
                   self.lastComputedStorage == source,
                   self.text == expectedBinding || self.text == self.lastSyncedText || self.text == source else { return }
             self.lastSyncedText = source
@@ -246,7 +246,7 @@ extension NativeTextViewCoordinator {
                 bottomTextView.recalcOverscroll(for: scrollView, debugTag: "textDidChange")
                 (scrollView as? ClampedScrollView)?.clampToInsets()
             }
-            if let completedTextMutation, !isApplyingHostHistory {
+            if let completedTextMutation, !isApplyingHostHistory, bindingFollows(documentId) {
                 onTextMutation?(completedTextMutation)
             }
             return
@@ -514,7 +514,7 @@ extension NativeTextViewCoordinator {
             }
         }
         previousActiveTokenIndices = activeTokenIndices
-        if let completedTextMutation, !isApplyingHostHistory {
+        if let completedTextMutation, !isApplyingHostHistory, bindingFollows(documentId) {
             onTextMutation?(completedTextMutation)
         }
         PerfTrace.end()
@@ -1128,6 +1128,10 @@ extension NativeTextViewCoordinator {
                       handleBacktab(textView) {
                 return true
             }
+        }
+        if let nativeTextView = textView as? NativeTextView,
+           nativeTextView.startLineMoveFromHangingCaret(commandSelector) {
+            return true
         }
 
         let command: MarkdownEditorCommand?
