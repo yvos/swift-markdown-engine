@@ -8,7 +8,8 @@
 //  AppKit `NSTextView` subclass used by the markdown editor. Stored state
 //  lives here; behavior is split across `NativeTextView+<Feature>.swift`
 //  files in this folder (frame & overscroll, caret workarounds, click remap,
-//  paste handling, drag-select boost, task checkbox, spelling policy).
+//  paste handling, drag-select boost, task checkbox, spelling policy, Writing
+//  Tools).
 //
 //  Bottom-overscroll math lives in `BottomOverscrollPolicy.swift`.
 //  Pasteboard image inspection lives in `PasteboardImageReader.swift`.
@@ -92,6 +93,13 @@ final class NativeTextView: NSTextView {
     var wideTableOverlays: [Int: WideTableOverlay] = [:]
     /// Persisted horizontal scroll offset per wide table; survives restyles.
     var tableHorizontalScrollOffsets: [Int: CGFloat] = [:]
+
+    /// While Writing Tools slide the text below an edit into place: the rest of the
+    /// edited paragraph; fragments from its end on are not drawn (`NativeTextView+WritingTools`).
+    var writingToolsHiddenRemainder: NSTextRange?
+    /// Where each Writing Tools context starts in the document: its ranges are
+    /// relative to it (a proofread's context is one paragraph, a rewrite's the document).
+    var writingToolsContextStarts: [UUID: Int] = [:]
 
     override func viewWillMove(toWindow newWindow: NSWindow?) {
         if let window, window !== newWindow {

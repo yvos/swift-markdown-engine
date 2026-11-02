@@ -2,13 +2,50 @@
 
 This is the maintained NoFray fork of
 [`nodes-app/swift-markdown-engine`](https://github.com/nodes-app/swift-markdown-engine).
-The integrated upstream baseline is upstream `0.14.0` at
-`5ed9dd8d7eea0c77e93a91462836f4a3ef52424c`. NoFray releases do not depend on upstream accepting
-our pull requests.
+The integrated upstream baseline is upstream `main` at
+`2e9f872ab2e1b094390b40a0f6b83278a4f53491`: release `0.15.0`
+(`f762ab7ec17472e6d3f3b652b97c747e507c66ec`) plus the post-release hanging-caret
+fix (`f527dd5`) and same-text document switch fix (PR #212). NoFray releases do
+not depend on upstream accepting our pull requests.
+
+## 0.15.0 integration
+
+Upstream is imported with ordinary merge ancestry at `2e9f872` rather than the
+bare tag: PR #212 makes a switch between two documents with identical text (two
+empty notes) adopt the new `documentId`, which the fork's revision-checked source
+transactions and document-scoped undo also depend on. The five conflict files are
+the wrapper, native text view, text delegate, demo and `FocusBindingTests`.
+
+- PR #175 (focus binding) was merged upstream as `575bc3d`. The fork's focus
+  implementation was identical; `FocusBindingTests` now carries upstream's copy.
+- Upstream's `bindingFollows` guard (Writing Tools document switch) and the fork's
+  `publishEditedSource` stale-binding guard are combined: edited source and
+  `onTextMutation` reach the host only while the editor follows that document and
+  is not applying host history.
+- Upstream's hanging-caret line move is consulted before the Escape/Tab/Shift-Tab
+  host fallback; neither handles the other's selectors.
+- Remaining conflicts keep the fork's wrapper/view properties beside upstream's
+  focus and Writing Tools state.
+
+Consumer-visible upstream changes: Writing Tools use the inline experience
+(`writingToolsBehavior = .complete`, not configurable) with macOS 27 workarounds;
+the text view always sits at its container's origin; `MarkdownEngineCodeBlocks`
+replaces HighlighterSwift with a bundled highlight.js (`HighlightJSBridge`,
+`CodeHighlightTheme`). NoFray links only `MarkdownEngine` and reads no text-view
+frame origin, so no call site changes. HighlighterSwift leaves NoFray's resolved
+packages. Exercise Writing Tools while the host applies a checkbox/source
+transaction during consumer qualification; upstream ends sessions only at a
+document switch and at undo.
+
+Local serialized `swift test` on macOS 27.2: 693 core tests in 94 suites with one
+issue, plus 1 LaTeX and 7 code-block tests passing. The one issue is the existing
+`MarkdownHTMLRendererTests` bare-URL expectation (`www.example.com` now detects
+as `https://`); it fails identically on `821bfb3` on this OS and is unchanged by
+the merge. CI runs on macOS 15.
 
 ## 0.14.0 audit repairs
 
-The existing upstream `0.14.0` baseline is unchanged. Two generic fixes retain
+The `0.14.0` audit repairs remain in the fork. Two generic fixes retain
 pasted Markdown whitespace/private pasteboard content and escaped brackets in
 inline-link labels. There is no public API or schema change. Parser and native
 paste regressions cover escape parity, unterminated labels, paragraphs, hard
@@ -78,16 +115,16 @@ after confirming its changes are retained and its working tree is clean.
 
 | Behavior | Regression coverage | Upstream status |
 | --- | --- | --- |
-| Optional two-way focus binding | `FocusBindingTests` | [PR #175](https://github.com/nodes-app/swift-markdown-engine/pull/175), open as of 2026-10-08 |
-| Host fallback for declined Escape, Tab and Shift-Tab | `UnhandledCommandTests` | [PR #176](https://github.com/nodes-app/swift-markdown-engine/pull/176), open as of 2026-10-08 |
-| Paragraph and task-list formatting | `BlockFormattingActionTests` | [PR #177](https://github.com/nodes-app/swift-markdown-engine/pull/177), open as of 2026-10-08 |
-| Opt-in task-checkbox toggles in read-only editors | `ReadOnlyTaskCheckboxTests` | [PR #178](https://github.com/nodes-app/swift-markdown-engine/pull/178), open as of 2026-10-08 |
+| Optional two-way focus binding | `FocusBindingTests` | Upstream since `0.15.0` ([PR #175](https://github.com/nodes-app/swift-markdown-engine/pull/175), `575bc3d`); no longer a fork extension |
+| Host fallback for declined Escape, Tab and Shift-Tab | `UnhandledCommandTests` | [PR #176](https://github.com/nodes-app/swift-markdown-engine/pull/176), open as of 2026-11-02; conflicts with upstream `main` (demo, hanging-caret command path) |
+| Paragraph and task-list formatting | `BlockFormattingActionTests` | [PR #177](https://github.com/nodes-app/swift-markdown-engine/pull/177), open as of 2026-11-02; merges cleanly with upstream `main` |
+| Opt-in task-checkbox toggles in read-only editors | `ReadOnlyTaskCheckboxTests` | [PR #178](https://github.com/nodes-app/swift-markdown-engine/pull/178), open as of 2026-11-02; conflicts with upstream `main` beside the merged focus properties |
 | Native pointer classification and exact source hit ranges | `PointerInteractionTests`, `MarkdownSourceRangeTests` | Maintained fork extension |
 | Host-decided link activation (`MarkdownLinkActivation`, `onLinkActivation`), preserving destination spaces and detecting autolinks only in the clicked paragraph | `MarkdownASTStylerTests`, `LinkActivationTests`, `LinkDestinationTests` (titles, whitespace, later-paragraph source ranges) | [PR #192](https://github.com/nodes-app/swift-markdown-engine/pull/192); review fixes released in `0.13.0-nofray.4` |
 | Escaped brackets in inline-link labels, with exact source coordinates through activation | `InlineParserTests`, `LinkActivationTests` | [PR #192](https://github.com/nodes-app/swift-markdown-engine/pull/192), generic repair |
 | Host-decided checkbox activation, including read-only views, without native text/undo mutation when handled | `TaskCheckboxActivationTests`, `ReadOnlyTaskCheckboxTests` | A2, generic upstream candidate |
 | Source transactions with document-local text undo | `MarkdownDocumentTransactionTests`, `NativeTypingHistoryTests` | Maintained fork extension |
-| Caret visibility during keyboard navigation in internally scrolling editors | `CaretVisibilityTests` | Maintained fork fix |
+| Caret visibility during keyboard navigation in internally scrolling editors | `CaretVisibilityTests` | [PR #191](https://github.com/nodes-app/swift-markdown-engine/pull/191), open as of 2026-11-02; upstream full-width reveal still uses the TextKit 1 path |
 | Preserve pasted Markdown paragraph boundaries, code indentation, hard breaks and raw private flavor | `NativePasteWhitespaceTests`, `BlockquotePasteTests`, `PasteStructureGuardTests`, `MarkdownPasteboardWriterTests` | [PR #197](https://github.com/nodes-app/swift-markdown-engine/pull/197); exact consumer qualification follows publication |
 
 Keep upstream submissions narrowly scoped on separate topic branches based on
@@ -277,6 +314,9 @@ checks from NoFray integration, manual UI acceptance and live-provider evidence.
 This maintenance change does not claim new manual UI or provider acceptance.
 
 The upstream Apache License 2.0 remains in `LICENSE`; the integrated upstream
-baseline has no `NOTICE` file. No license, platform requirement or package
+baseline has no `NOTICE` file. Since `0.15.0`, upstream's opt-in
+`MarkdownEngineCodeBlocks` bundles highlight.js 11.11.1 with its BSD 3-Clause
+license as a target resource instead of depending on HighlighterSwift; the core
+`MarkdownEngine` product is unaffected. No license, platform requirement or package
 dependency is changed by these fork extensions. Generic additions and modified
 files remain covered by that license. This record documents their provenance.

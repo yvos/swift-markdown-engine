@@ -380,11 +380,11 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         textView.sourceDocumentID = documentId
         textView.sourceRevision = sourceRevision
         if #available(macOS 15.1, *) {
-            // `.limited` = the Writing Tools popover panel; `.complete` = the inline
-            // experience that morphs the text with an animation. We use `.limited` so
-            // rewrites/proofread land in the popover (no in-text animation) — it also
-            // sidesteps the inline-rewrite flicker that dims text below the selection.
-            textView.writingToolsBehavior = .limited
+            // Inline: rewrites morph in place. On 15.1–26 the text below a rewrite dims
+            // for the animation: AppKit's older path wants the text view directly in the
+            // clip view, ours sits in the container.
+            textView.writingToolsBehavior = .complete
+            WritingToolsEditTrackerFix.install()
         }
         // Create TextKit 2 layout bridge
         let bridge = LayoutBridge(textLayoutManager)
@@ -543,12 +543,26 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
         }()
 
         if wtActive && isNodeSwitch {
-            // User switched files while Writing Tools was active — discard the
-            // WT session so it doesn't overwrite the wrong node.
-            // Keep wtStartDocumentId so textViewWritingToolsDidEnd can detect the
-            // node mismatch and discard the results.
-            context.coordinator.isWritingToolsActive = false
-        } else if wtActive {
+            // Editing the storage while Writing Tools stream makes AppKit throw
+            // (measured on 27.0.1, popover too): switch once the session has settled.
+            if #available(macOS 15.2, *), let writingTools = textView.writingToolsCoordinator,
+               writingTools.state == .interactiveStreaming {
+                context.coordinator.deferNodeSwitch(until: writingTools) { [weak nsView] in
+                    guard let nsView else { return }
+                    self.updateNSView(nsView, context: context)
+                }
+                return
+            }
+            // Any other state ends here: left running, the session's end replays its
+            // ranges into the next document (NSRangeException on 27.0.1), and its
+            // result is dropped because the coordinator no longer counts it as active.
+            context.coordinator.cancelDeferredNodeSwitch()
+            context.coordinator.resetWritingToolsSession()
+            if #available(macOS 15.2, *) { textView.writingToolsCoordinator?.stopWritingTools() }
+            textView.endWritingToolsHide()
+        } else if context.coordinator.isWritingToolsActive {
+            // Back on the session's document: a deferred switch is void.
+            context.coordinator.cancelDeferredNodeSwitch()
             // WT active on the same node — don't interfere with the session.
             // Note: this skips the heightBehavior sync below, so a heightBehavior
             // change while Writing Tools is active won't take effect until the
@@ -720,7 +734,10 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
             }
             return
         }
-        if context.coordinator.didInitialFormatting
+        // Never on a switch: two documents can hold the same text (two empty notes),
+        // and returning here left `documentId` on the old one for the editor's life.
+        if !isNodeSwitch
+            && context.coordinator.didInitialFormatting
             && context.coordinator.lastSyncedText == text
             && !fontChanged {
             return
@@ -762,6 +779,8 @@ public struct NativeTextViewWrapper: NSViewRepresentable {
             context.coordinator.resetImageEmbedState()
             // Drop old document's wide-table overlays synchronously.
             textView.removeAllWideTableOverlays()
+            // And its autocorrection underlines, which AppKit keeps per view.
+            textView.removeCorrectionUnderlines()
             // Park at top during the rebuild; the new document's own saved offset
             // (if any) is restored after its height is known (see below).
             nsView.contentView.scroll(to: NSPoint(x: 0, y: -nsView.contentInsets.top))
