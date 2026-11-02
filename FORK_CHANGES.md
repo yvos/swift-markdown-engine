@@ -185,7 +185,8 @@ upstream's `isFocused` beside the read-only option. #176 runs upstream's
 hanging-caret line move inside its non-raw path, before the host fallback; the
 `0.15.0-nofray.1` fork release also runs it in raw-source mode, which NoFray does
 not use. Reconcile that on the next fork update. #191 adds one comment commit for
-upstream's `rectInClipView` geometry. No PR comments were posted.
+upstream's `rectInClipView` geometry. Each PR received a status comment with
+this validation; upstream CI approval and review remain with its maintainers.
 
 Full serial `swift test --no-parallel` on macOS 27.2 per head: the counts below
 plus 1 LaTeX and 7 code-block tests. Each run has one issue, the
