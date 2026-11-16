@@ -140,15 +140,15 @@ after confirming its changes are retained and its working tree is clean.
 | Behavior | Regression coverage | Upstream status |
 | --- | --- | --- |
 | Optional two-way focus binding | `FocusBindingTests` | Upstream since `0.15.0` ([PR #175](https://github.com/nodes-app/swift-markdown-engine/pull/175), `575bc3d`); no longer a fork extension |
-| Host fallback for declined Escape, Tab and Shift-Tab | `UnhandledCommandTests` | [PR #176](https://github.com/nodes-app/swift-markdown-engine/pull/176), open; refreshed onto upstream `main` on 2026-11-02 |
-| Paragraph and task-list formatting | `BlockFormattingActionTests` | [PR #177](https://github.com/nodes-app/swift-markdown-engine/pull/177), open; refreshed onto upstream `main` on 2026-11-02 |
-| Opt-in task-checkbox toggles in read-only editors | `ReadOnlyTaskCheckboxTests` | [PR #178](https://github.com/nodes-app/swift-markdown-engine/pull/178), open; refreshed onto upstream `main` on 2026-11-02 |
+| Host fallback for declined Escape, Tab and Shift-Tab | `UnhandledCommandTests` | [PR #176](https://github.com/nodes-app/swift-markdown-engine/pull/176), open; refreshed onto `0.16.0` on 2026-11-16 |
+| Paragraph and task-list formatting | `BlockFormattingActionTests` | [PR #177](https://github.com/nodes-app/swift-markdown-engine/pull/177), open; refreshed onto `0.16.0` on 2026-11-16 |
+| Opt-in task-checkbox toggles in read-only editors | `ReadOnlyTaskCheckboxTests` | [PR #178](https://github.com/nodes-app/swift-markdown-engine/pull/178), open; refreshed onto `0.16.0` on 2026-11-16 |
 | Native pointer classification and exact source hit ranges | `PointerInteractionTests`, `MarkdownSourceRangeTests` | Maintained fork extension |
 | Host-decided link activation (`MarkdownLinkActivation`, `onLinkActivation`), preserving destination spaces and detecting autolinks only in the clicked paragraph | `MarkdownASTStylerTests`, `LinkActivationTests`, `LinkDestinationTests` (titles, whitespace, later-paragraph source ranges) | [PR #192](https://github.com/nodes-app/swift-markdown-engine/pull/192); review fixes released in `0.13.0-nofray.4` |
 | Escaped brackets in inline-link labels, with exact source coordinates through activation | `InlineParserTests`, `LinkActivationTests` | [PR #192](https://github.com/nodes-app/swift-markdown-engine/pull/192), generic repair |
 | Host-decided checkbox activation, including read-only views, without native text/undo mutation when handled | `TaskCheckboxActivationTests`, `ReadOnlyTaskCheckboxTests` | A2, generic upstream candidate |
 | Source transactions with document-local text undo | `MarkdownDocumentTransactionTests`, `NativeTypingHistoryTests` | Maintained fork extension |
-| Caret visibility during keyboard navigation in internally scrolling editors | `CaretVisibilityTests` | [PR #191](https://github.com/nodes-app/swift-markdown-engine/pull/191), open, refreshed on 2026-11-02; upstream full-width reveal still uses the TextKit 1 path |
+| Caret visibility during keyboard navigation in internally scrolling editors | `CaretVisibilityTests` | [PR #191](https://github.com/nodes-app/swift-markdown-engine/pull/191), open, refreshed onto `0.16.0` on 2026-11-16; upstream full-width reveal still uses the TextKit 1 path |
 | Preserve pasted Markdown paragraph boundaries, code indentation, hard breaks and raw private flavor | `NativePasteWhitespaceTests`, `BlockquotePasteTests`, `PasteStructureGuardTests`, `MarkdownPasteboardWriterTests` | [PR #197](https://github.com/nodes-app/swift-markdown-engine/pull/197); exact consumer qualification follows publication |
 
 Keep upstream submissions narrowly scoped on separate topic branches based on
@@ -196,6 +196,30 @@ Upstream submissions remain independent of fork releases. The six open topic
 PRs are updated against upstream `main`, including its post-release table-paste
 fix; that fix is not part of this exact `0.14.0` release baseline.
 
+### Upstream PR refresh on 2026-11-16
+
+Each of the six open topics was merged with the exact upstream `0.16.0`
+tag (`8cb63c1b3f22ab61444c494a7736d67f3df4b17a`). Changelog entries remain
+unreleased. #192 retains the link callback alongside file drop and refreshes it
+when a parked editor is adopted. #197 preserves the private paste flavor while
+using upstream's wiki link ID projection.
+
+Full serial `swift test --no-parallel` on macOS 27.2.1 per head: the core
+counts below plus 1 LaTeX and 7 code-block tests. Each topic has one known
+issue: the upstream bare-host renderer test assumes HTTP, while this macOS
+detector supplies HTTPS. The 0.16 fork release corrects the test expectation
+without changing rendering; that unrelated test correction stays out of the
+topic branches.
+
+| PR | Published head | Core tests |
+| --- | --- | --- |
+| #176 commands | `2c958698a70938c43ae3a18257dccf28531f212f` | 692 in 89 suites |
+| #177 formatting | `e486254b31cf995660b23f8acfba7be94d571b7b` | 690 in 89 suites |
+| #178 read-only checkbox | `4aa718b7ed4214857d7b08367f297cb41a6e4136` | 683 in 89 suites |
+| #191 caret | `84e2cfd7c55829afe3197743d75cc6a54e4e8ad8` | 679 in 89 suites |
+| #192 links | `9149a1612708a83e2c3a109033e87b8fc6468030` | 691 in 91 suites |
+| #197 paste | `8b606680f636072c6c279f9ff34e9158a97b9bd1` | 682 in 89 suites |
+
 ### Upstream PR refresh on 2026-11-02
 
 Each open topic was merged with upstream `main` at
@@ -240,6 +264,21 @@ validation, and upstream CI approval/review remain with its maintainers.
 | #192 links | `b304ae43bdccc8639d75e9f3a6415fa00fbbe39b` | 594 + 1 |
 
 ## Release provenance
+
+- `0.16.0-nofray.1` ([GitHub pre-release](https://github.com/yvos/swift-markdown-engine/releases/tag/0.16.0-nofray.1)):
+  [fork PR #14](https://github.com/yvos/swift-markdown-engine/pull/14) imports
+  upstream `0.16.0` at `8cb63c1b3f22ab61444c494a7736d67f3df4b17a`.
+  The annotated tag targets `f2cc7418e5368bb3a2f1cdfd878ce89d20c90b1c`,
+  tree-identical to the tested PR head `a48724c`. Local
+  `swift test --no-parallel` passed 748 core tests in 100 suites, plus 7
+  code-block and 1 LaTeX test, on macOS 27.2.1 / Xcode 27.2.
+  [Hosted CI](https://github.com/yvos/swift-markdown-engine/actions/runs/43850329792) was queued with no steps run at qualification.
+  NoFray exact remote-pin preflight `20261116-113703-preflight-i0t3qa8g` resolved the tag without
+  an override. Isolated wrapper run `20261116-113723-test-2hiu8pmb` and integrated-main
+  run `20261116-114304-test-bofkwi1m` each passed 40 adapter, native history, checkbox (minutes
+  and preparation), link and license tests, with no warnings or skips.
+  The pin and provenance are on NoFray main at `64a9f2017`. No manual
+  Writing Tools, VoiceOver or XCTest UI session is claimed.
 
 - `0.15.0-nofray.1` ([GitHub pre-release](https://github.com/yvos/swift-markdown-engine/releases/tag/0.15.0-nofray.1)):
   ordinary import of upstream `main` at `2e9f872ab2e1b094390b40a0f6b83278a4f53491`
