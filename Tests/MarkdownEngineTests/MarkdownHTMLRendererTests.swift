@@ -86,8 +86,12 @@ struct MarkdownHTMLRendererTests {
             == "<p><a href=\"https://example.com\">https://example.com</a></p>")
         #expect(html("see https://example.com/a?b=1&c=2 now")
             == "<p>see <a href=\"https://example.com/a?b=1&amp;c=2\">https://example.com/a?b=1&amp;c=2</a> now</p>")
-        #expect(html("www.example.com")
-            == "<p><a href=\"http://www.example.com\">www.example.com</a></p>")
+        // NSDataDetector supplies the scheme for a bare host; macOS versions
+        // differ on whether to assume HTTP or HTTPS.
+        #expect([
+            "<p><a href=\"http://www.example.com\">www.example.com</a></p>",
+            "<p><a href=\"https://www.example.com\">www.example.com</a></p>"
+        ].contains(html("www.example.com")))
         #expect(html("mail me@example.com")
             == "<p>mail <a href=\"mailto:me@example.com\">me@example.com</a></p>")
     }

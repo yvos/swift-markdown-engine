@@ -3,10 +3,31 @@
 This is the maintained NoFray fork of
 [`nodes-app/swift-markdown-engine`](https://github.com/nodes-app/swift-markdown-engine).
 The integrated upstream baseline is upstream `main` at
-`2e9f872ab2e1b094390b40a0f6b83278a4f53491`: release `0.15.0`
-(`f762ab7ec17472e6d3f3b652b97c747e507c66ec`) plus the post-release hanging-caret
-fix (`f527dd5`) and same-text document switch fix (PR #212). NoFray releases do
-not depend on upstream accepting our pull requests.
+`8cb63c1b3f22ab61444c494a7736d67f3df4b17a`, the exact upstream
+[`0.16.0` release](https://github.com/nodes-app/swift-markdown-engine/releases/tag/0.16.0).
+NoFray releases do not depend on upstream accepting our pull requests.
+
+## 0.16.0 integration
+
+The ordinary merge keeps the four reconciled editor files: the wrapper, native
+text view, text delegate and paste handler. Upstream now retains native history
+for the ten most recent documents, validates it against the document's text on
+edit/undo, and restores selection, scroll and focus on return. The fork's native
+undo completion observer still publishes edited source. Revision-checked host
+source transactions validate the same undo baseline before joining the stack;
+`MarkdownDocumentTransactionTests` covers a fresh undo/redo after reloading.
+
+Private Markdown paste skips lossy normalization and uses upstream's storage
+projection for wiki link IDs. `NativePasteWhitespaceTests` checks the raw and
+styled editors against the same stored source, including whitespace and literal
+glyphs. The hanging-caret line move is scoped to styled mode, matching the
+reviewed command topic, ahead of the Escape/Tab/Shift-Tab host fallback.
+
+File drop (`fileDrop`) and editor parking (`parkingKey`) are opt-in; NoFray does
+not set either. The core remains dependency-free, with the same products and
+license. NoFray needs no editor call-site changes. Writing Tools panel results
+and Markdown list conversion, VoiceOver and selection on opaque fills benefit
+from upstream fixes.
 
 ## 0.15.0 integration
 

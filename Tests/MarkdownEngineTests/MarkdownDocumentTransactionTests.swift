@@ -55,6 +55,59 @@ struct MarkdownDocumentTransactionTests {
     }
 
     @Test
+    func transactionAfterExternalReloadStartsFreshUndoHistory() throws {
+        _ = NSApplication.shared
+        let coordinator = NativeTextViewCoordinator(
+            text: .constant("new"),
+            fontName: NSFont.systemFont(ofSize: 14).fontName,
+            fontSize: 14,
+            isWikiLinkActive: .constant(false),
+            onLinkClick: nil,
+            onInlineSelectionChange: nil
+        )
+        coordinator.documentId = "meeting-a"
+        let textView = NativeTextView(frame: .zero)
+        textView.isEditable = true
+        textView.delegate = coordinator
+        coordinator.textView = textView
+
+        textView.allowsUndo = true
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 300, height: 160),
+            styleMask: [.titled], backing: .buffered, defer: false
+        )
+        window.contentView = textView
+        window.makeFirstResponder(textView)
+        defer { window.orderOut(nil) }
+
+        let manager = try #require(textView.undoManager)
+        manager.groupsByEvent = false
+        manager.beginUndoGrouping()
+        manager.registerUndo(withTarget: textView) { $0.string = "older" }
+        manager.endUndoGrouping()
+        #expect(manager.canUndo)
+        coordinator.noteUndoBaseline(for: "meeting-a", text: "old")
+        coordinator.rebuildTextStorageAndStyle(textView, from: "new")
+
+        let transaction = MarkdownDocumentTransaction(
+            documentID: "meeting-a",
+            sourceRevision: 0,
+            expectedSource: "new",
+            replacements: [.init(range: NSRange(location: 0, length: 1), text: "f")],
+            actionName: "Edit document"
+        )
+        var failureCode: MarkdownDocumentTransactionFailureCode?
+        #expect(coordinator.applyDocumentTransaction(transaction, to: textView, failureCode: &failureCode))
+        #expect(textView.string == "few")
+
+        textView.undo(nil)
+        #expect(textView.string == "new")
+        #expect(!manager.canUndo)
+        textView.redo(nil)
+        #expect(textView.string == "few")
+    }
+
+    @Test
     func staleDocumentRevisionRejectsTransactionWithoutChangingText() {
         _ = NSApplication.shared
         let coordinator = NativeTextViewCoordinator(
